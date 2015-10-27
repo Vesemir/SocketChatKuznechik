@@ -34,7 +34,6 @@ PIINV = (165, 45, 50, 143, 14, 48, 56, 192, 84, 230, 158, 57, 85, 126, 82, 145, 
          36, 52, 203, 237, 244, 206, 153, 16, 68, 64, 146, 58, 1, 38, 18, 26, 72, 104,
          245, 129, 139, 199, 214, 32, 10, 8, 0, 76, 215, 116)
 
-assert PIINV[PI_[23]] == 23
 
 usualbin = bin
 
@@ -46,14 +45,11 @@ class mem:
     """Инстанс данного класса представляет собой элемент, поддерживающий операцию
 возведения в степень"""
     def __init__(self, power):
-        assert power >= 0
         self.pow = power
 
     def __mul__(self, other):
         assert isinstance(other, mem)
         res = mem(self.pow + other.pow)
-        if VERBOSITY:
-            print('{} * {} = {}'.format(self, other, res))
         return res
 
     def __str__(self):
@@ -67,8 +63,6 @@ class mem:
 class Polynom_GF_2:
     """Имплементит умножение полиномов надо конечным полем GF(2)"""
     def __init__(self, members, diviser=None):
-        assert all(isinstance(member, mem) for member in members)
-                 
         self.members = sorted([each for each in members],
                               key=lambda x: x.pow,
                               reverse=True)
@@ -78,18 +72,10 @@ class Polynom_GF_2:
         else:
             self.pow = 7
         
-        if diviser:
-            assert isinstance(diviser, Polynom_GF_2)
-            
-            assert diviser.pow > self.pow
         self.diviser = diviser
         self.size = len(self.members)
 
     def __sub__(self, other):
-        assert isinstance(self, Polynom_GF_2)
-        assert isinstance(other, mem)
-        if other not in self:
-            assert ValueError('Element not present in polynom')
         whole = [each for each in self]
         for each in reversed(whole):
             if each.pow == other.pow:
@@ -144,8 +130,6 @@ class Polynom_GF_2:
             if theirmember not in self:
                 tempres.append(theirmember)
         res = Polynom_GF_2(tempres)
-        if VERBOSITY:
-            print('%s / %s = %s' % (self, other, res))
         return res
 
     def __add__(self, other): #wow so fast
@@ -155,8 +139,6 @@ class Polynom_GF_2:
         tempres = sobad ^ other
         
         res = Polynom_GF_2(convert_int(tempres), diviser=self.diviser)
-        if VERBOSITY:
-            print('%s + %s = %s' % (self, hother, res))
         return res
 
     def __rmul__(self, other):
@@ -169,7 +151,6 @@ class Polynom_GF_2:
                     
         sobad = self.compute()
         modulo = 2 ** self.diviser.pow
-        assert modulo == 256
         remnant = self.diviser.compute() % modulo
         
         tempres = 0
@@ -184,31 +165,23 @@ class Polynom_GF_2:
             other >>= 1
         
         res = Polynom_GF_2(convert_int(tempres), diviser=self.diviser)
-        
-        if VERBOSITY:
-            print('{}\nmultiplied by {} equals {}'.format(self,
-                                        hother,
-                                        res)
-                  )
+      
         return res
 
-CANONIC_POLY = Polynom_GF_2([mem(8), mem(7), mem(6), mem(1), mem(0)])
+CANONIC_POLY = Polynom_GF_2((mem(8), mem(7), mem(6), mem(1), mem(0)))
 
 def intpoly(val):
-    assert isinstance(val, int)
-    assert val < 256
     return INTDICT.get(val)
 
 
 def convert_int(val):
-    assert val < 256
     if val == 0:
         if VERBOSITY:
             print("INT 0 -> ZERO POLYNOM")
         return Polynom_GF_2([])
     binstr = bin(val).zfill(8)
         
-    res = Polynom_GF_2([mem(idx) for idx, bit in enumerate(reversed(binstr)) if int(bit)])
+    res = Polynom_GF_2(mem(idx) for idx, bit in enumerate(reversed(binstr)) if int(bit))
     if VERBOSITY:
         print("INT {} -> POLYNOM {}".format(val, res))
     return res
@@ -236,16 +209,13 @@ def convert_poly(poly):
 
 
 def fi(poly):
-    assert isinstance(poly, Polynom_GF_2)
-    return ''.join(['1' if mem(idx) in poly else '0'
-                    for idx in range(poly.pow, -1, -1)]).zfill(8)
+    return ''.join('1' if mem(idx) in poly else '0'
+                    for idx in range(poly.pow, -1, -1)).zfill(8)
 
 
 def poly(bitstr):
-    assert isinstance(bitstr, str)
-    assert len(bitstr) == 8
-    return Polynom_GF_2([mem(idx) for idx, bit in
-                         enumerate(reversed(bitstr)) if int(bit)],
+    return Polynom_GF_2(mem(idx) for idx, bit in
+                         enumerate(reversed(bitstr)) if int(bit),
                         diviser=CANONIC_POLY)
 
 
@@ -254,45 +224,31 @@ def add_32(one, other):
 
 
 def vecs(s, elem):
-    assert isinstance(elem, int)
-    assert 2 ** s > elem
     return bin(elem).zfill(s)
 
 
 def ints(s, bitstr):
-    assert len(bitstr) == s
     res = int(bitstr, 2)
-    assert 2 ** s > res
     return res
 
 
 def rot_11(bitstr):
-    assert isinstance(bitstr, str)
-    assert len(bitstr) == 32
     return bitstr[11:] + bitstr[:11]
 
 
 def X(str_a, str_b):
-    assert len(str_a)
-    assert len(str_a) == len(str_b)
-    
     return bin(int(str_a, 2) ^ int(str_b, 2)).zfill(len(str_a))
 
 
 def pi(bitstr):
-    assert isinstance(bitstr, str)
-    assert len(bitstr) == 8
     return vecs(8, PI_[ints(8, bitstr)])
 
 
 def piinv(bitstr):
-    assert isinstance(bitstr, str)
-    assert len(bitstr) == 8
     return vecs(8, PIINV[ints(8, bitstr)])
 
 
 def S(bitstr):
-    assert isinstance(bitstr, str)
     if not len(bitstr) == 128:
         bitstr = bitstr.zfill(128)
     res = []
@@ -302,7 +258,6 @@ def S(bitstr):
 
 
 def Sinv(bitstr):
-    assert isinstance(bitstr, str)
     if not len(bitstr) == 128:
         bitstr = bitstr.zfill(128)
     res = []
@@ -346,7 +301,6 @@ if FAST:
     l = l_nonverbose
 
 def R(bitstr):
-    assert isinstance(bitstr, str)
     if not len(bitstr) == 128:
         bitstr = bitstr.zfill(128)
     argarray = dict()
@@ -354,12 +308,10 @@ def R(bitstr):
         part = bitstr[idx*8:(idx+1)*8]
         argarray['a%d'%(15-idx)] = part
     res = l(**argarray) + ''.join(argarray['a%d'%idx] for idx in range(15, 0, -1))
-    assert len(res) == 128
     return res
 
 
 def Rinv(bitstr):
-    assert isinstance(bitstr, str)
     if not len(bitstr) == 128:
         bitstr = bitstr.zfill(128)
     argarray = dict()
@@ -369,9 +321,7 @@ def Rinv(bitstr):
         argarray[15-idx] = part
     shiftedarray = [argarray[idx] for idx in range(16)]
     shiftedarray = shiftedarray[15:] + shiftedarray[:15]
-    assert len(shiftedarray) == 16
     res = ''.join(argarray[idx] for idx in range(14, -1, -1)) + l(*shiftedarray)
-    assert len(res) == 128
     return res
 
 
@@ -382,7 +332,6 @@ def L(bitstr):
 
 
 def Linv(bitstr):
-    assert isinstance(bitstr, str)
     if not len(bitstr) == 128:
         bitstr = bitstr.zfill(128)
     res = bitstr
@@ -390,7 +339,6 @@ def Linv(bitstr):
     for dummy in range(16):
         res = Rinv(res)
         assert len(res) == 128
-    assert len(res) == 128
     return res
 
 
@@ -408,15 +356,11 @@ def k_k_and_1(k_, k__, mul):
     roundkeys = k_, k__
     for idx in range(1 + mul * 8, 9 + mul * 8):
         roundkeys = F(C[idx], *roundkeys)
-        if VERBOSITY:
-            print([hex(int(each, 2)) for each in roundkeys])
     return [each.zfill(128) for each in roundkeys]
 
 tohex = lambda b: hex(int(b, 2))
 
 def compute_keys(k1, k2):
-    assert len(k1) == 128
-    assert len(k2) == 128
     keymas = []
     keymas.extend([k1, k2])
     ki, kj = k1, k2
@@ -427,7 +371,6 @@ def compute_keys(k1, k2):
 
 
 def encrypt(keys, message):
-    assert len(keys) == 10
     temp = L(S(X(keys[0], message)))
     for idx in range(1, 9):
         temp = L(S(X(keys[idx], temp)))
@@ -439,9 +382,7 @@ def encrypt(keys, message):
 
 def make_keys(key):
     rawkey = bin(int(binascii.hexlify(key.encode('utf-8')), 16)).zfill(256)
-    assert len(rawkey) == 256
     K1, K2 = rawkey[:128], rawkey[128:]
-    assert all(len(eachkey) == 128 for eachkey in (K1, K2))
     return compute_keys(K1, K2)
     
 
@@ -481,7 +422,6 @@ def message_decrypt(keys, message):
         
 
 def decrypt(keys, crypto):
-    assert len(keys) == 10
     temp = Sinv(Linv(X(keys[9], crypto)))
     for idx in range(8, 0, -1):
         temp = Sinv(Linv(X(keys[idx], temp)))

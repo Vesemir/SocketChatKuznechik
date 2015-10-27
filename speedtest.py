@@ -10,7 +10,7 @@ choices = '0123456789abcdef'
 KEY = '01234567890123456789012345678901'
 SIZE = 32
 KEYS = make_keys(KEY)
-REPEATS = 200
+REPEATS = 1000
 
 
 def string_yielder():
