@@ -4,6 +4,7 @@ from galois import message_encrypt
 from galois import message_decrypt
 from galois import make_keys
 import timeit
+import matplotlib.pyplot as plt
 
 choices = '0123456789abcdef'
 
@@ -27,8 +28,14 @@ def get_string(size=SIZE):
 def avg(numbers):
     return sum(numbers) / len(numbers)
 
-tring = get_string()
-tr = timeit.Timer('message_encrypt(KEYS, tring)', 'from __main__ import KEYS, tring, message_encrypt')
-res = tr.repeat(repeat=REPEATS, number=1)
-print("Timing with block size %d, for %d repeats, got result %f " %(SIZE, REPEATS, avg(res)))
+if __name__ == '__main__':
+    plotbuff = []
+    for strlen in range(32, 1024, 32):
+        tring = get_string(strlen)
+        tr = timeit.Timer('message_encrypt(KEYS, tring)', 'from __main__ import KEYS, tring, message_encrypt')
+        res = tr.repeat(repeat=REPEATS, number=1)
+        print("Timing with block size %d, for %d repeats, got result %f " %(SIZE, REPEATS, avg(res)))
+        plotbuff.append((strlen, res))
+    plt.plot(zip(*plotbuff))
+    plt.show()
 

@@ -181,7 +181,7 @@ def convert_int(val):
         return Polynom_GF_2([])
     binstr = bin(val).zfill(8)
         
-    res = Polynom_GF_2(mem(idx) for idx, bit in enumerate(reversed(binstr)) if int(bit))
+    res = Polynom_GF_2((mem(idx) for idx, bit in enumerate(reversed(binstr)) if int(bit)))
     if VERBOSITY:
         print("INT {} -> POLYNOM {}".format(val, res))
     return res
@@ -214,8 +214,8 @@ def fi(poly):
 
 
 def poly(bitstr):
-    return Polynom_GF_2(mem(idx) for idx, bit in
-                         enumerate(reversed(bitstr)) if int(bit),
+    return Polynom_GF_2((mem(idx) for idx, bit in
+                         enumerate(reversed(bitstr)) if int(bit)),
                         diviser=CANONIC_POLY)
 
 
