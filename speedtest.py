@@ -11,6 +11,7 @@ choices = '0123456789abcdef'
 KEY = '01234567890123456789012345678901'
 SIZE = 32
 KEYS = make_keys(KEY)
+
 REPEATS = 1000
 
 
@@ -30,7 +31,7 @@ def avg(numbers):
 
 if __name__ == '__main__':
     plotbuff = []
-    for strlen in range(32, 1024, 32):
+    for strlen in range(32, 128, 32):
         tring = get_string(strlen)
         tr = timeit.Timer('message_encrypt(KEYS, tring)', 'from __main__ import KEYS, tring, message_encrypt')
         res = tr.repeat(repeat=REPEATS, number=1)

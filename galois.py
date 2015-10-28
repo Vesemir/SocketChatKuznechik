@@ -357,12 +357,6 @@ def compute_keys(k1, k2):
         keymas.extend([ki, kj])
     return keymas
 
-
-
-
-
-
-
 def encrypt(keys, message):
     temp = L(S(X(keys[0], message)))
     for idx in range(1, 9):
@@ -375,7 +369,8 @@ def encrypt(keys, message):
 
 def make_keys(key):
     rawkey = bin(int(binascii.hexlify(key.encode('utf-8')), 16)).zfill(256)
-    K1, K2 = rawkey[:128], rawkey[128:]
+    K1, K2 = bytize(rawkey[:128]), bytize(rawkey[128:])
+    
     return compute_keys(K1, K2)
     
 chop = lambda s: s[32:64]
@@ -388,7 +383,7 @@ def message_encrypt(keys, message):
        
     for idx in range(len(rawmessage) // 32):
         partial = rawmessage[idx*32:(idx+1)*32]
-        res.append(chop(tohex(encrypt(keys, bytize(bin(int(partial, 16)))))))
+        res.append(chop(tohex(encrypt(keys, bytize(bin(int(partial, 16)).zfill(128))))))
         
     return ''.join(res).encode('utf-8')
 
@@ -413,12 +408,12 @@ def message_decrypt(keys, message):
     
     return morphed
 
-K1 = bin(0x8899aabbccddeeff0011223344556677).zfill(128)
-K2 = bin(0xfedcba98765432100123456789abcdef).zfill(128)
-
-thosekeys = compute_keys(bytize(K1), bytize(K2))
-
-print(message_encrypt(thosekeys, b'abcdef9284113894'))
+##K1 = bin(0x8899aabbccddeeff0011223344556677).zfill(128)
+##K2 = bin(0xfedcba98765432100123456789abcdef).zfill(128)
+##
+##thosekeys = compute_keys(bytize(K1), bytize(K2))
+##
+##print(message_encrypt(thosekeys, b'27e88a6678aa0ae0c5b123a991595e'))
 
 def decrypt(keys, crypto):
     temp = Sinv(Linv(X(keys[9], crypto)))
