@@ -358,10 +358,7 @@ def compute_keys(k1, k2):
     return keymas
 
 
-K1 = bin(0x8899aabbccddeeff0011223344556677).zfill(128)
-K2 = bin(0xfedcba98765432100123456789abcdef).zfill(128)
 
-thosekeys = compute_keys(bytize(K1), bytize(K2))
 
 
 
@@ -416,9 +413,11 @@ def message_decrypt(keys, message):
     
     return morphed
 
+K1 = bin(0x8899aabbccddeeff0011223344556677).zfill(128)
+K2 = bin(0xfedcba98765432100123456789abcdef).zfill(128)
 
+thosekeys = compute_keys(bytize(K1), bytize(K2))
 
-a = bin(0x1122334455667700ffeeddccbbaa9988).zfill(128)
 print(message_encrypt(thosekeys, b'abcdef9284113894'))
 
 def decrypt(keys, crypto):
