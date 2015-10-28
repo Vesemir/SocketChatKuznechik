@@ -37,6 +37,6 @@ if __name__ == '__main__':
         res = tr.repeat(repeat=REPEATS, number=1)
         print("Timing with block size %d, for %d repeats, got result %f " %(strlen, REPEATS, avg(res)))
         plotbuff.append((strlen, res))
-    plt.plot(zip(*plotbuff))
+    plt.plot(list(zip(*plotbuff)))
     plt.show()
 
