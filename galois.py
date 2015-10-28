@@ -328,7 +328,6 @@ def bytize(vec):
         bts.append(int(partial, 2))
     return arr_gen(bts)
 
-# DUMB RETARD # SO DONE
 
 F = lambda gamma, a1, a0: (X(L(S(X(gamma, a1))), a0), a1)
 
@@ -336,9 +335,6 @@ F = lambda gamma, a1, a0: (X(L(S(X(gamma, a1))), a0), a1)
 Cmake = lambda i: L(bytize(vecs(128, i)))
 
 tohex = lambda b: ''.join(hex(each)[2:].zfill(2) for each in b)
-print("LOOK: ")
-print(tohex(Linv(L(bytize(bin(0xffeeddccbbaa99881122334455667700))))))
-#print(tohex(Rinv(R(bytize(bin(0xffeeddccbbaa99881122334455667700)), 16), 15)))
 
 C = dict()
 
@@ -421,13 +417,13 @@ def decrypt(keys, crypto):
         print("DEC({}) = {}".format(crypto, res))
     return res
 
-K1 = bin(0x8899aabbccddeeff0011223344556677).zfill(128)
-K2 = bin(0xfedcba98765432100123456789abcdef).zfill(128)
-
-thosekeys = compute_keys(bytize(K1), bytize(K2))
-print(message_encrypt(thosekeys, b'27e88a6678aa0ae0c5b123a991595e'))
-print(message_decrypt(thosekeys, message_encrypt(thosekeys, b'27e88a6678aa0ae0c5b123a991595e')))
-assert message_decrypt(thosekeys, message_encrypt(thosekeys, b'27e88a6678aa0ae0c5b123a991595e')) == b'27e88a6678aa0ae0c5b123a991595e' 
+##K1 = bin(0x8899aabbccddeeff0011223344556677).zfill(128)
+##K2 = bin(0xfedcba98765432100123456789abcdef).zfill(128)
+##
+##thosekeys = compute_keys(bytize(K1), bytize(K2))
+##print(message_encrypt(thosekeys, b'27e88a6678aa0ae0c5b123a991595e'))
+##print(message_decrypt(thosekeys, message_encrypt(thosekeys, b'27e88a6678aa0ae0c5b123a991595e')))
+##assert message_decrypt(thosekeys, message_encrypt(thosekeys, b'27e88a6678aa0ae0c5b123a991595e')) == b'27e88a6678aa0ae0c5b123a991595e' 
 
 
 
