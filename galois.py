@@ -1,4 +1,7 @@
 import binascii
+from itertools import chain
+from functools import reduce
+from operator import xor
 
 VERBOSITY = False
 FAST = True
@@ -236,43 +239,36 @@ def rot_11(bitstr):
     return bitstr[11:] + bitstr[:11]
 
 
+def arr_gen(gen):
+    return list(chain((0 for _ in range(16)), gen, (0 for _ in range(16))))
+
+#print("DOOM: ", arr_gen((3 for doom in range(1))))
+
 def X(str_a, str_b):
-    return bin(int(str_a, 2) ^ int(str_b, 2)).zfill(len(str_a))
+    assert len(str_a) == len(str_b)
+    if len(str_a) == 16:
+        return arr_gen(a ^ str_b[idx] for idx, a in enumerate(str_a))
+    else:
+        return [a ^ str_b[idx] for idx, a in enumerate(str_a)]
 
 
-def pi(bitstr):
-    return vecs(8, PI_[ints(8, bitstr)])
+def S(bt_ptr):
+    for idx, bt in enumerate(bt_ptr[16:32]):
+        bt_ptr[16+idx] = PI_[bt]
+    return bt_ptr
 
 
-def piinv(bitstr):
-    return vecs(8, PIINV[ints(8, bitstr)])
 
-
-def S(bitstr):
-    if not len(bitstr) == 128:
-        bitstr = bitstr.zfill(128)
-    res = []
-    for idx in range(len(bitstr) // 8):
-        res.append(pi(bitstr[idx*8:(idx+1)*8]))
-    return ''.join(res)
-
+#print(S(X([0, 5, 3, 4, 3, 6, 7, 8, 6, 9, 34, 43, 2, 32, 43, 65],
+#          [3, 1, 8, 54, 12, 23, 43, 29, 4, 6, 7 ,5 ,34, 21, 43, 21])))
 
 def Sinv(bitstr):
-    if not len(bitstr) == 128:
-        bitstr = bitstr.zfill(128)
-    res = []
-    for idx in range(len(bitstr) // 8):
-        res.append(piinv(bitstr[idx*8:(idx+1)*8]))
-    return ''.join(res)
+    for idx, bt in enumerate(bt_ptr[16:32]):
+        bt_ptr[16+idx] = PIINV[bt]
+    return bt_ptr
 
-def g_sum(*args):
-    wh = args[0]
-    for arg in args[1:]:
-        wh = wh ^ arg
-    return wh
-
+# no strings allowed
 def g_mul(one, other, divpow=8, modulo=256, remnant=195):
-    other = int(other, 2)
     res = 0
     for dummy in range(8):
         if other & 1:
@@ -284,12 +280,12 @@ def g_mul(one, other, divpow=8, modulo=256, remnant=195):
             one ^= remnant
         other >>= 1
     return res
+
+MULS = (148, 32, 133, 16, 194, 192, 1, 251, 1, 192, 194, 16, 133, 32, 148, 1)
     
-def l_nonverbose(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15):
-    return bin(g_sum(g_mul(148, a15), g_mul(32, a14), g_mul(133, a13), g_mul(16, a12),
-                    g_mul(194, a11), g_mul(192, a10), g_mul(1, a9), g_mul(251, a8),
-                    g_mul(1, a7), g_mul(192, a6), g_mul(194, a5), g_mul(16, a4),
-                    g_mul(133, a3), g_mul(32, a2), g_mul(148, a1), g_mul(1, a0))).zfill(8)
+def l_nonverbose(arr_ptr, st_idx):
+    assert len(arr_ptr) == 48
+    return reduce(xor, map(g_mul, *(MULS, arr_ptr[st_idx:st_idx+16])))
 
 
 def l(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15):
@@ -300,65 +296,57 @@ def l(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15):
 if FAST:
     l = l_nonverbose
 
-def R(bitstr):
-    if not len(bitstr) == 128:
-        bitstr = bitstr.zfill(128)
-    argarray = dict()
-    for idx in range(len(bitstr) // 8):
-        part = bitstr[idx*8:(idx+1)*8]
-        argarray['a%d'%(15-idx)] = part
-    res = l(**argarray) + ''.join(argarray['a%d'%idx] for idx in range(15, 0, -1))
-    return res
+def R(arr_ptr, st_idx):
+    arr_ptr[st_idx-1] = l(arr_ptr, st_idx)
+    return arr_ptr
 
 
-def Rinv(bitstr):
-    if not len(bitstr) == 128:
-        bitstr = bitstr.zfill(128)
-    argarray = dict()
-    
-    for idx in range(len(bitstr) // 8):
-        part = bitstr[idx*8:(idx+1)*8]
-        argarray[15-idx] = part
-    shiftedarray = [argarray[idx] for idx in range(16)]
-    shiftedarray = shiftedarray[15:] + shiftedarray[:15]
-    res = ''.join(argarray[idx] for idx in range(14, -1, -1)) + l(*shiftedarray)
+def Rinv(arr_ptr, st_idx):
+    arr_ptr[st_idx+16] = l(arr_ptr, st_idx)
     return res
 
 
 def L(bitstr):
-    for dummy in range(16):
-        bitstr = R(bitstr)
-    return bitstr
+    for st_idx in reversed(range(1, 17)):
+        bitstr = R(bitstr, st_idx)
+    return arr_gen(bitstr[:16])
 
 
 def Linv(bitstr):
-    if not len(bitstr) == 128:
-        bitstr = bitstr.zfill(128)
-    res = bitstr
-    
-    for dummy in range(16):
-        res = Rinv(res)
-        assert len(res) == 128
-    return res
+    for st_idx in range(16, 32):
+        bitstr = Rinv(bitstr, st_idx)
+    return arr_gen(bitstr[32:])
+
+
+def bytize(vec):
+    assert len(vec) == 128
+    bts = []
+    for idx in range(len(vec) // 8):
+        partial = vec[idx*8:(idx+1)*8]
+        bts.append(int(partial, 2))
+    return arr_gen(bts)
+
 
 
 F = lambda gamma, a1, a0: (X(L(S(X(gamma, a1))), a0), a1)
 
 
-Cmake = lambda i: L(vecs(128, i))
+Cmake = lambda i: L(bytize(vecs(128, i)))
+
+tohex = lambda b: ''.join(hex(each)[2:].zfill(2) for each in b)
+
 C = dict()
 
 for idx in range(1, 33):
-    C[idx] = Cmake(idx)
-
-    
+    C[idx] = arr_gen(Cmake(idx)[16:32])
+        
 def k_k_and_1(k_, k__, mul):
     roundkeys = k_, k__
+    
     for idx in range(1 + mul * 8, 9 + mul * 8):
         roundkeys = F(C[idx], *roundkeys)
-    return [each.zfill(128) for each in roundkeys]
-
-tohex = lambda b: hex(int(b, 2))
+        
+    return roundkeys
 
 def compute_keys(k1, k2):
     keymas = []
@@ -368,6 +356,14 @@ def compute_keys(k1, k2):
         ki, kj = k_k_and_1(ki, kj, stdeg)
         keymas.extend([ki, kj])
     return keymas
+
+
+K1 = bin(0x8899aabbccddeeff0011223344556677).zfill(128)
+K2 = bin(0xfedcba98765432100123456789abcdef).zfill(128)
+
+thosekeys = compute_keys(bytize(K1), bytize(K2))
+
+
 
 
 def encrypt(keys, message):
@@ -385,19 +381,19 @@ def make_keys(key):
     K1, K2 = rawkey[:128], rawkey[128:]
     return compute_keys(K1, K2)
     
-
+chop = lambda s: s[32:64]
 
 def message_encrypt(keys, message):
+    '''message - hexed bytes themselves, so...'''
     res = []
-
     extralength = (32 - (len(message) % 32)) * b'0'
     rawmessage = message + extralength
        
     for idx in range(len(rawmessage) // 32):
         partial = rawmessage[idx*32:(idx+1)*32]
-        res.append(encrypt(keys, bin(int(partial, 16)).zfill(128)))
+        res.append(chop(tohex(encrypt(keys, bytize(bin(int(partial, 16)))))))
         
-    return hex(int(''.join(res), 2))[2:].encode('utf-8')
+    return ''.join(res).encode('utf-8')
 
 
 def message_decrypt(keys, message):
@@ -419,7 +415,7 @@ def message_decrypt(keys, message):
         morphed = morphed[:-2*chopping]
     
     return morphed
-        
+
 
 def decrypt(keys, crypto):
     temp = Sinv(Linv(X(keys[9], crypto)))
