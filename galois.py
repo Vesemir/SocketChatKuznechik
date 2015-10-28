@@ -417,6 +417,10 @@ def message_decrypt(keys, message):
     return morphed
 
 
+
+a = bin(0x1122334455667700ffeeddccbbaa9988).zfill(128)
+print(message_encrypt(thosekeys, b'abcdef9284113894'))
+
 def decrypt(keys, crypto):
     temp = Sinv(Linv(X(keys[9], crypto)))
     for idx in range(8, 0, -1):
