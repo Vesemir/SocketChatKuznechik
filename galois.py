@@ -262,7 +262,7 @@ def S(bt_ptr):
 #print(S(X([0, 5, 3, 4, 3, 6, 7, 8, 6, 9, 34, 43, 2, 32, 43, 65],
 #          [3, 1, 8, 54, 12, 23, 43, 29, 4, 6, 7 ,5 ,34, 21, 43, 21])))
 
-def Sinv(bitstr):
+def Sinv(bt_ptr):
     for idx, bt in enumerate(bt_ptr[16:32]):
         bt_ptr[16+idx] = PIINV[bt]
     return bt_ptr
@@ -282,19 +282,20 @@ def g_mul(one, other, divpow=8, modulo=256, remnant=195):
     return res
 
 MULS = (148, 32, 133, 16, 194, 192, 1, 251, 1, 192, 194, 16, 133, 32, 148, 1)
+MULSINV = (148, 1, 148, 32, 133, 16, 194, 192, 1, 251, 1, 192, 194, 16, 133, 32)
     
-def l_nonverbose(arr_ptr, st_idx):
+def l(arr_ptr, st_idx):
     assert len(arr_ptr) == 48
     return reduce(xor, map(g_mul, *(MULS, arr_ptr[st_idx:st_idx+16])))
 
 
-def l(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15):
+def l_verbose(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15):
     return fi(148 * poly(a15) + 32 * poly(a14) + 133 * poly(a13) + 16 * poly(a12) + \
               194 * poly(a11) + 192 * poly(a10) + 1 * poly(a9) + 251 * poly(a8) +\
               1 * poly(a7) + 192 * poly(a6) + 194 * poly(a5) + 16 * poly(a4) +\
               133 * poly(a3) + 32 * poly(a2) + 148 * poly(a1) + 1 * poly(a0))
-if FAST:
-    l = l_nonverbose
+if VERBOSITY:
+    l = l_verbose
 
 def R(arr_ptr, st_idx):
     arr_ptr[st_idx-1] = l(arr_ptr, st_idx)
@@ -302,8 +303,12 @@ def R(arr_ptr, st_idx):
 
 
 def Rinv(arr_ptr, st_idx):
-    arr_ptr[st_idx+16] = l(arr_ptr, st_idx)
-    return res
+    dumb_retard = [0 for _ in range(16)]
+    dumb_retard.append(arr_ptr[st_idx])
+    dumb_retard.extend(reversed(arr_ptr[st_idx+1:st_idx+16]))
+    dumb_retard.extend([0 for _ in range(16)])
+    arr_ptr[st_idx+16] = l(dumb_retard, st_idx)
+    return arr_ptr
 
 
 def L(bitstr):
@@ -326,7 +331,7 @@ def bytize(vec):
         bts.append(int(partial, 2))
     return arr_gen(bts)
 
-
+# DUMB RETARD # SO DONE
 
 F = lambda gamma, a1, a0: (X(L(S(X(gamma, a1))), a0), a1)
 
@@ -334,6 +339,9 @@ F = lambda gamma, a1, a0: (X(L(S(X(gamma, a1))), a0), a1)
 Cmake = lambda i: L(bytize(vecs(128, i)))
 
 tohex = lambda b: ''.join(hex(each)[2:].zfill(2) for each in b)
+print("LOOK: ")
+print(tohex(Linv(L(bytize(bin(0xffeeddccbbaa99881122334455667700))))))
+#print(tohex(Rinv(R(bytize(bin(0xffeeddccbbaa99881122334455667700)), 16), 15)))
 
 C = dict()
 
@@ -393,10 +401,9 @@ def message_decrypt(keys, message):
     
     for idx in range(len(message) // 32):
         partial = message[idx*32:(idx+1)*32]
-        res.append(decrypt(keys, bin(int(partial, 16)).zfill(128)))
-    decrypted = ''.join(res)
-    
-    morphed = hex(int(decrypted, 2))[2:]
+        res.append(chop(tohex(decrypt(keys, bytize(bin(int(partial, 16)).zfill(128))))))
+    decrypted = ''.join(res)    
+    morphed = decrypted
     
     chopping = 0
     for idx in reversed(range(len(morphed) // 2)):
@@ -406,14 +413,7 @@ def message_decrypt(keys, message):
     if chopping:
         morphed = morphed[:-2*chopping]
     
-    return morphed
-
-##K1 = bin(0x8899aabbccddeeff0011223344556677).zfill(128)
-##K2 = bin(0xfedcba98765432100123456789abcdef).zfill(128)
-##
-##thosekeys = compute_keys(bytize(K1), bytize(K2))
-##
-##print(message_encrypt(thosekeys, b'27e88a6678aa0ae0c5b123a991595e'))
+    return morphed.encode('utf-8')
 
 def decrypt(keys, crypto):
     temp = Sinv(Linv(X(keys[9], crypto)))
@@ -423,6 +423,16 @@ def decrypt(keys, crypto):
     if VERBOSITY:
         print("DEC({}) = {}".format(crypto, res))
     return res
+
+K1 = bin(0x8899aabbccddeeff0011223344556677).zfill(128)
+K2 = bin(0xfedcba98765432100123456789abcdef).zfill(128)
+
+thosekeys = compute_keys(bytize(K1), bytize(K2))
+print(message_encrypt(thosekeys, b'27e88a6678aa0ae0c5b123a991595e'))
+print(message_decrypt(thosekeys, message_encrypt(thosekeys, b'27e88a6678aa0ae0c5b123a991595e')))
+assert message_decrypt(thosekeys, message_encrypt(thosekeys, b'27e88a6678aa0ae0c5b123a991595e')) == b'27e88a6678aa0ae0c5b123a991595e' 
+
+
 
 
 if VERBOSITY:
