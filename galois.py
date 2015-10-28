@@ -303,11 +303,8 @@ def R(arr_ptr, st_idx):
 
 
 def Rinv(arr_ptr, st_idx):
-    dumb_retard = [0 for _ in range(16)]
-    dumb_retard.append(arr_ptr[st_idx])
-    dumb_retard.extend(reversed(arr_ptr[st_idx+1:st_idx+16]))
-    dumb_retard.extend([0 for _ in range(16)])
-    arr_ptr[st_idx+16] = l(dumb_retard, st_idx)
+    arr_ptr[st_idx+16] = arr_ptr[st_idx]
+    arr_ptr[st_idx+16] = l(arr_ptr, st_idx+1)
     return arr_ptr
 
 
