@@ -1,6 +1,7 @@
 #include "Python.h"
 #include "stdio.h"
 /*CONSTANTS SECTIONS HERE : #like pascal, LOL*/
+//#define PY_SSIZE_T_CLEAN
 #define uchar unsigned char
 const int LENGTH = 16;
 const int MULS[] = {148, 32, 133, 16, 194, 192, 1, 251, 1, 192, 194, 16, 133, 32, 148, 1};
@@ -36,19 +37,19 @@ void printdebug(uchar* arr_ptr){
 	printf("FIRST: ");
 	for (int i = 0; i < 16; i ++){
 		
-		printf("%x", arr_ptr[i]);
+		printf("%02x", arr_ptr[i]);
 	}
 	printf("\n");
 	printf("SECOND: ");
 	for (int i = 16; i < 32; i ++){
 		
-		printf("%x", arr_ptr[i]);
+		printf("%02x", arr_ptr[i]);
 	}
 	printf("\n");
 	printf("THIRD: ");
 	for (int i = 32; i < 48; i ++){
 		
-		printf("%x", arr_ptr[i]);
+		printf("%02x", arr_ptr[i]);
 	}
 	printf("\n");
 }
@@ -96,9 +97,7 @@ int l(uchar* arr_ptr, int st_idx){
 }
 
 void R(uchar* arr_ptr, int st_idx){
-	printf("\nDOING R\n");
 	arr_ptr[st_idx-1] = l(arr_ptr, st_idx);
-	printdebug(arr_ptr);
 	return;	
 }
 
@@ -128,7 +127,6 @@ static PyObject *
 {
 	PyObject* pyMsg;
 	Py_buffer buff;
-	uchar* msg_ptr;
 	int msg_length = 0;
 	int length = 0;
 	/* args must have 2 doubles and may have one integer, otherwise max_iterations defaults to 1000*/
@@ -144,8 +142,11 @@ static PyObject *
 		temp = L(S(X(allocated, temp, Keys[idx])));
 	}
 	temp = X(allocated, temp, Keys[9]);
-	temp[31] = '\0';
-	pyMsg = PyBytes_FromString((char*)temp);
+	for (int idx = 0; idx < 16; idx++){
+		temp[idx] = temp[idx+16];
+	}
+	pyMsg = Py_BuildValue("y#", temp, 16);
+	
 	free(temp);
 	return pyMsg;			
 }

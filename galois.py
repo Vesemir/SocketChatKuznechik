@@ -282,7 +282,6 @@ def g_mul(one, other, divpow=8, modulo=256, remnant=195):
     return res
 
 MULS = (148, 32, 133, 16, 194, 192, 1, 251, 1, 192, 194, 16, 133, 32, 148, 1)
-MULSINV = (148, 1, 148, 32, 133, 16, 194, 192, 1, 251, 1, 192, 194, 16, 133, 32)
     
 def l(arr_ptr, st_idx):
     assert len(arr_ptr) == 48

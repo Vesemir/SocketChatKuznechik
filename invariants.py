@@ -1,4 +1,5 @@
 from galois import *
+from binascii import hexlify
 """ Инфа:
 Итерационные ключи Ki ∈ V128, i = 1, 2, …, 10, вырабатываются на основе ключа
 K = k255||…||k0 ∈ V256, ki ∈ V1, i = 0, 1, …, 255, и определяются равенствами:
@@ -46,10 +47,12 @@ K2 = bin(0xfedcba98765432100123456789abcdef).zfill(128)
 that = bin(K).zfill(128)
 assert (K1, K2) == (that[:128], that[128:])
 a = bin(0x1122334455667700ffeeddccbbaa9988).zfill(128)
+b = bin(int(hexlify(b'aksjfoejfldlskdk'), 16)).zfill(128)
 assert X(K1, a) == bin(0x99bb99ff99bb99ffffffffffffffffff)
 assert S(X(K1, a)) == bin(0xe87de8b6e87de8b6b6b6b6b6b6b6b6b6)
 assert L(S(X(K1, a))) == bin(0xe297b686e355b0a1cf4a2f9249140830)
 K = dict()
+
 K[1] = 0x8899aabbccddeeff0011223344556677
 K[2] = 0xfedcba98765432100123456789abcdef
 K[3] = 0xdb31485315694343228d6aef8cc78c44
