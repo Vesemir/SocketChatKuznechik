@@ -62,14 +62,14 @@ uchar* S(uchar* arr_ptr) {
 }
 
 uchar* allocate(int size){
-	uchar* fastbuff = (uchar*) malloc(48);
+	uchar* fastbuff = (uchar*) malloc (size);
 	return fastbuff;
 }
 
-uchar* X(uchar* fastbuff, uchar* ptr_strone, uchar* ptr_strtwo){
+uchar* X(uchar* fastbuff, uchar* ptr_strone, int st_idx, uchar* ptr_strtwo){
 	/* length should be LENGTH*/
 	for (int idx = 0; idx < LENGTH; idx++){
-		fastbuff[idx+16] = ptr_strone[idx] ^ ptr_strtwo[idx];
+		fastbuff[idx+16] = ptr_strone[idx+st_idx] ^ ptr_strtwo[idx];
 		}
 	return fastbuff;
 }
@@ -111,44 +111,104 @@ uchar* L(uchar* arr_ptr){
 	return arr_ptr;
 }
 
+void encrypt(uchar* allocated, uchar* buf, int st_idx, uchar** keys){
+	L(S(X(allocated, buf, st_idx, keys[0])));
+	for (int idx = 1; idx < 9; idx++){
+		L(S(X(allocated, allocated, st_idx, keys[idx])));
+	}
+		X(allocated, allocated, st_idx, keys[9]);
+	for (int idx = 0; idx < 16; idx++){
+		allocated[idx] = allocated[idx+16];
+	}
+	return;
+
+}
+
 /* the Module DocString */
-PyDoc_STRVAR(galois__doc__,
+PyDoc_STRVAR(galoislib__doc__,
 	"Galois polynom multiplication evaluation");
 
 
 
 /* function doc strings */
 PyDoc_STRVAR(encrypt__doc__,
-	"str, array of iterative keys -> encrypted str");
+	"str[16], array of iterative keys -> encrypted str[16]");
+
+PyDoc_STRVAR(message_encrypt__doc__,
+	"str[any size > 1], array of iterative keys -> encrypted str (with padding)");
 
 /* wrapper for C function*/
 static PyObject *
 	py_encrypt(PyObject *self, PyObject *args)
 {
 	PyObject* pyMsg;
-	Py_buffer buff;
+	Py_buffer* buff = (Py_buffer*)malloc(sizeof(Py_buffer));
 	int msg_length = 0;
-	int length = 0;
 	/* args must have 2 doubles and may have one integer, otherwise max_iterations defaults to 1000*/
 	/* :iterate_point is for error messages */
-	if (!PyArg_ParseTuple(args, "y*", &buff))
+	if (!PyArg_ParseTuple(args, "y*", buff))
 		return NULL;
 	/*make sure what we got is correct*/
-	msg_length = buff.len / buff.itemsize;
+	msg_length = buff->len / buff->itemsize;
 	if (msg_length != 16) return NULL;
+	int st_idx = 0;
 	uchar* allocated = allocate(48);
-	uchar* temp = L(S(X(allocated, (uchar*)buff.buf, Keys[0])));
-	for (int idx = 1; idx < 9; idx++){
-		temp = L(S(X(allocated, temp, Keys[idx])));
-	}
-	temp = X(allocated, temp, Keys[9]);
-	for (int idx = 0; idx < 16; idx++){
-		temp[idx] = temp[idx+16];
-	}
-	pyMsg = Py_BuildValue("y#", temp, 16);
-	
-	free(temp);
+	uchar** keys = (uchar**)malloc(10);
+	for (int idx = 0; idx < 10; idx ++)
+		keys[idx] = Keys[idx];
+
+	encrypt(allocated, (uchar*)buff->buf, st_idx, keys);
+	pyMsg = Py_BuildValue("y#", allocated, 16);
+	free(allocated);
+	free(keys);
+	free(buff);
 	return pyMsg;			
+}
+
+static PyObject *
+	py_message_encrypt(PyObject * self, PyObject * args)
+{
+	PyObject* pyMsg;
+	Py_buffer* buff = (Py_buffer*)malloc(sizeof(Py_buffer));
+	int msg_length = 0;
+	if (!PyArg_ParseTuple(args, "y*", buff))
+		return NULL;
+	msg_length = buff->len / buff->itemsize;
+	int extra_length = 0;
+	if (msg_length % 16 != 0)
+		extra_length = 16 - msg_length % 16;
+	int blocks_number = msg_length / 16;
+	uchar* retval = allocate((blocks_number + (extra_length!= 0)) * 16 + 1);
+	uchar* allocated = allocate(48);
+	uchar** keys = (uchar**)malloc(10);
+	int st_idx = 0;
+	for (int idx = 0; idx < 10; idx ++)
+		keys[idx] = Keys[idx];
+	for (int jdx = 0; jdx < blocks_number; jdx++){
+		encrypt(allocated, (uchar*)buff->buf, jdx, keys);
+		for (int idx = 0; idx < 16; idx++){
+			retval[idx+16*jdx] = allocated[idx];
+		}
+	}
+	if (extra_length){
+		for (int idx = 0; idx < 16; idx++){
+			if (idx < 16 - extra_length)
+				allocated[idx] = ((uchar*)buff->buf)[16*blocks_number+idx];
+			else
+				allocated[idx] = '\x00';
+		}
+		encrypt(allocated, allocated, st_idx, keys);
+		for (int idx = 0; idx < 16; idx++){
+			retval[idx+16*blocks_number] = allocated[idx];
+		}
+				
+	}
+	pyMsg = Py_BuildValue("y#", retval, (blocks_number + (extra_length!= 0)) * 16);
+	free(buff);
+	free(retval);
+	free(allocated);
+	free(keys);
+	return pyMsg;
 }
 
 /* list of defined methods*/
@@ -156,21 +216,22 @@ static PyObject *
 /* py_iterate_point is name of c function handling python call*/
 /* METH_VARGS tell py how to call the handler*/
 /* {NULL, NULL} means end of definition*/
-static PyMethodDef galois_methods[] = {
+static PyMethodDef galoislib_methods[] = {
 	{"encrypt", py_encrypt, METH_VARARGS, encrypt__doc__},
+	{"message_encrypt", py_message_encrypt, METH_VARARGS, message_encrypt__doc__},
 	{NULL, NULL} /* sentinel*/
 };
 /* struct moduledef since python3*/
 static struct PyModuleDef moduledef = {
 	PyModuleDef_HEAD_INIT,
-	"galois",
-	galois__doc__,
+	"galoislib",
+	galoislib__doc__,
 	-1,
-	galois_methods,
+	galoislib_methods,
 };
 /*PyMODINIT_FUNC helps with portability*/
 PyMODINIT_FUNC
-	PyInit_galois(void)
+	PyInit_galoislib(void)
 {
 	return PyModule_Create(&moduledef);
 	
