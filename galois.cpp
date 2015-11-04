@@ -172,19 +172,17 @@ static int
 		Py_buffer* keysbuf  = (Py_buffer*)malloc(sizeof(Py_buffer));
 		if (!PyArg_ParseTuple(args, "y*", keysbuf))
 			return -1;
+		
 		if (keysbuf){
 			if (keysbuf->len != 160){
 				free(keysbuf);
 				return -1;
 			}
 			else {
-				temp = self->keys;
-				Py_INCREF(keysbuf);
 				self->keys = keysbuf;
-				Py_XDECREF(temp);				
-				printf("set field ...");
 			}
-		}		
+		}
+		
 		return 0;
 }
 
@@ -193,7 +191,7 @@ static PyObject*
 	if (self->keys == NULL){
 		PyErr_SetString(PyExc_AttributeError, "keys");
 		return NULL;}
-	return Py_BuildValue("y#", self->keys->buf, 160);
+	return Py_BuildValue("y#", (uchar*)self->keys->buf, 160);
 }
 
 static PyObject*
@@ -212,7 +210,7 @@ static PyObject*
 		if (msg_length % 16 != 0)
 			extra_length = 16 - msg_length % 16;
 		int blocks_number = msg_length / 16;
-		uchar* retval = allocate((blocks_number + (extra_length!= 0)) * 16 + 1);
+		uchar* retval = allocate((blocks_number + (extra_length!= 0)) * 16);
 		uchar* allocated = allocate(48);
 		int st_idx = 0;
 		for (int jdx = 0; jdx < blocks_number; jdx++){
