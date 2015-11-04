@@ -17,7 +17,8 @@ from win32com.directsound import directsound
 from tkinter.messagebox import showinfo, askquestion
 
 # executes invariants, probably should mute it later
-from galois import message_encrypt, message_decrypt, make_keys
+from cryptolib import Crypto
+from galois import make_keys
 # [/done]
 
 sys.argv=['chclient']
@@ -175,7 +176,7 @@ class ChatGui(tkinter.Tk):
 class ChatSocket(socket.socket):
     def __init__(self, family, type_of):
         super().__init__(family, type_of)
-        self.keys = None
+        self.cryptor = None
         
     def servConnect(self, addr):
         try:
@@ -197,12 +198,12 @@ class ChatSocket(socket.socket):
             msg = binascii.hexlify(msg.encode('utf-8'))
         if magNum['message'] == mag:
             
-            if self.keys is None:
+            if self.cryptor is None:
                 showinfo(title='No key set',
                          message='No secret key set, won\'t do')
                 return -1
             else:
-                msg = message_encrypt(self.keys, msg)
+                msg = self.cryptor.message_encrypt(msg)
         self.send(int.to_bytes(mag, 4, 'little'))
         self.send(int.to_bytes(len(msg), 4, 'little'))
         send_bytes = 0
@@ -220,12 +221,12 @@ class ChatSocket(socket.socket):
             recv_bytes += len(dump)
             msg.extend(dump)
         if magNum['message'] == magic:
-            if self.keys is None:
+            if self.cryptor is None:
                 showinfo(title='No key set',
                          message='No secret key set, can\'t do')
                 return magic, -1
             else:
-                msg = message_decrypt(self.keys, msg.decode('utf-8'))
+                msg = self.cryptor.message_decrypt(msg)
         if magic != magNum['stream']:
             try:
                 msg = binascii.unhexlify(msg).decode('utf-8')
@@ -236,7 +237,7 @@ class ChatSocket(socket.socket):
         return magic, msg
 
     def wipe_key(self):
-        self.keys = None
+        self.cryptor = None
         
     def recvChat(self):
         mag, message = self.recvMessage()
@@ -414,7 +415,7 @@ def setCryptoKey(secret_key):
         showinfo(title='Size error!',
                  message='Secret key must be exactly 32 chars long')
         return
-    mysock.keys = make_keys(secret_key)
+    mysock.cryptor = Crypto(secret_key)
     showinfo(title='Success!',
              message='Secret key was succesfully set')
     myGui.addConfButton.grid(row=0, column=3, sticky='E')

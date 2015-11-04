@@ -20,6 +20,22 @@ const int PI_[] = {252, 238, 221, 17, 207, 110, 49, 22, 251, 196, 250, 218, 35, 
 217, 231, 137, 225, 27, 131, 73, 76, 63, 248, 254, 141, 83, 170, 144, 202, 216, 133,
 97, 32, 113, 103, 164, 45, 43, 9, 91, 203, 155, 37, 208, 190, 229, 108, 82, 89, 166,
 116, 210, 230, 244, 180, 192, 209, 102, 175, 194, 57, 75, 99, 182};
+const int PI_INV_ = {165, 45, 50, 143, 14, 48, 56, 192, 84, 230, 158, 57, 85, 126, 82, 145, 100, 3,
+         87, 90, 28, 96, 7, 24, 33, 114, 168, 209, 41, 198, 164, 63, 224, 39, 141, 12,
+         130, 234, 174, 180, 154, 99, 73, 229, 66, 228, 21, 183, 200, 6, 112, 157, 65,
+         117, 25, 201, 170, 252, 77, 191, 42, 115, 132, 213, 195, 175, 43, 134, 167, 177,
+         178, 91, 70, 211, 159, 253, 212, 15, 156, 47, 155, 67, 239, 217, 121, 182, 83,
+         127, 193, 240, 35, 231, 37, 94, 181, 30, 162, 223, 166, 254, 172, 34, 249, 226,
+         74, 188, 53, 202, 238, 120, 5, 107, 81, 225, 89, 163, 242, 113, 86, 17, 106, 137,
+         148, 101, 140, 187, 119, 60, 123, 40, 171, 210, 49, 222, 196, 95, 204, 207, 118,
+         44, 184, 216, 46, 54, 219, 105, 179, 20, 149, 190, 98, 161, 59, 22, 102, 233, 92,
+         108, 109, 173, 55, 97, 75, 185, 227, 186, 241, 160, 133, 131, 218, 71, 197, 176,
+         51, 250, 150, 111, 110, 194, 246, 80, 255, 93, 169, 142, 23, 27, 151, 125, 236,
+         88, 247, 31, 251, 124, 9, 13, 122, 103, 69, 135, 220, 232, 79, 29, 78, 4, 235,
+         248, 243, 62, 61, 189, 138, 136, 221, 205, 11, 19, 152, 2, 147, 128, 144, 208,
+         36, 52, 203, 237, 244, 206, 153, 16, 68, 64, 146, 58, 1, 38, 18, 26, 72, 104,
+		 245, 129, 139, 199, 214, 32, 10, 8, 0, 76, 215, 116}
+
 /* FUNCTIONS LIST HERE LIES S #static for it being unaccessible by others */
 
 uchar Keys[][16] = {{0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77},
@@ -63,11 +79,17 @@ void printdebug(uchar* arr_ptr){
 }
 
 uchar* S(uchar* arr_ptr) {
-	for (int i=LENGTH; i < LENGTH + 16; i++){
+	for (int i = LENGTH; i < LENGTH + 16; i++){
 		arr_ptr[i] = PI_[arr_ptr[i]];
 	}
 	return arr_ptr;
 }
+
+uchar* Sinv(uchar* arr_ptr) {
+	for (int i = LENGTH; i < LENGTH + 16; i++){
+		arr_ptr[i] = PI_INV_[arr_ptr[i]];
+	}
+	return arr_ptr;
 
 uchar* allocate(int size){
 	uchar* fastbuff = (uchar*) malloc (size);
@@ -109,6 +131,12 @@ void R(uchar* arr_ptr, int st_idx){
 	return;	
 }
 
+void Rinv(uchar* arr_ptr, int st_idx){
+	arr_ptr[st_idx+16] = arr_ptr[st_idx];
+	arr_ptr[st_idx+16] = l(arr_ptr, st_idx+1);
+	return arr_ptr;	
+}
+
 uchar* L(uchar* arr_ptr){
 	for (int st_idx = LENGTH; st_idx > 0; st_idx--){
 		R(arr_ptr, st_idx);
@@ -119,17 +147,38 @@ uchar* L(uchar* arr_ptr){
 	return arr_ptr;
 }
 
+uchar* Linv(uchar* arr_ptr){
+	for (int st_idx = 16; st_idx < 32; st_idx++){
+		Rinv(arr_ptr, st_idx);
+	}
+	for (int idx = 0; idx < 16; idx++){
+		arr_ptr[idx+16] = arr_ptr[idx+32];
+	}
+	return arr_ptr
+
 void encrypt(uchar* allocated, uchar* buf, int st_idx, uchar* keys){
 	L(S(X(allocated, buf, st_idx, keys, 0)));
 	for (int idx = 1; idx < 9; idx++){
 		L(S(X(allocated, allocated, st_idx, keys, idx*16)));
 	}
-		X(allocated, allocated, st_idx, keys, 144);
+	X(allocated, allocated, st_idx, keys, 144);
 	for (int idx = 0; idx < 16; idx++){
 		allocated[idx] = allocated[idx+16];
 	}
 	return;
+}
 
+void decrypt(uchar* allocated, uchar* buf, int st_idx, uchar* keys){
+	Sinv(Linv(X(allocated, buf, st_idx, keys, 144)));
+	for (int idx = 8; idx > 0; idx--){
+		Sinv(Linv(X(allocated, allocated, st_idx, keys, idx*16)));
+	}
+	X(allocated, allocated, st_idx, keys, 0);
+	for (int idx = 0; idx < 16; idx++){
+		allocated[idx] = allocated[idx+32];
+	}
+	return;
+	
 }
 
 /* the Module DocString */

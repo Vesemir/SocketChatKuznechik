@@ -368,10 +368,11 @@ def encrypt(keys, message):
 chop = lambda s: s[32:64]
 
 def make_keys(key):
+    assert len(key) == 32
     rawkey = bin(int(binascii.hexlify(key.encode('utf-8')), 16)).zfill(256)
     K1, K2 = bytize(rawkey[:128]), bytize(rawkey[128:])
     
-    return [binascii.unhexlify(chop(tohex(val))) for val in compute_keys(K1, K2)]
+    return b''.join(binascii.unhexlify(chop(tohex(val))) for val in compute_keys(K1, K2))
     
 
 
