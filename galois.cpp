@@ -74,10 +74,10 @@ uchar* allocate(int size){
 	return fastbuff;
 }
 
-uchar* X(uchar* fastbuff, uchar* ptr_strone, int st_idx, uchar* ptr_strtwo){
+uchar* X(uchar* fastbuff, uchar* ptr_strone, int st_idx, uchar* ptr_strtwo, int key_idx){
 	/* length should be LENGTH*/
 	for (int idx = 0; idx < LENGTH; idx++){
-		fastbuff[idx+16] = ptr_strone[idx+st_idx] ^ ptr_strtwo[idx];
+		fastbuff[idx+16] = ptr_strone[idx+st_idx] ^ ptr_strtwo[idx+key_idx];
 		}
 	return fastbuff;
 }
@@ -119,12 +119,12 @@ uchar* L(uchar* arr_ptr){
 	return arr_ptr;
 }
 
-void encrypt(uchar* allocated, uchar* buf, int st_idx, uchar** keys){
-	L(S(X(allocated, buf, st_idx, keys[0])));
+void encrypt(uchar* allocated, uchar* buf, int st_idx, uchar* keys){
+	L(S(X(allocated, buf, st_idx, keys, 0)));
 	for (int idx = 1; idx < 9; idx++){
-		L(S(X(allocated, allocated, st_idx, keys[idx])));
+		L(S(X(allocated, allocated, st_idx, keys, idx*16)));
 	}
-		X(allocated, allocated, st_idx, keys[9]);
+		X(allocated, allocated, st_idx, keys, 144);
 	for (int idx = 0; idx < 16; idx++){
 		allocated[idx] = allocated[idx+16];
 	}
@@ -132,6 +132,18 @@ void encrypt(uchar* allocated, uchar* buf, int st_idx, uchar** keys){
 
 }
 
+/* the Module DocString */
+PyDoc_STRVAR(cryptolib__doc__,
+	"Cryptolib for galois mul");
+
+/* function doc strings */
+PyDoc_STRVAR(encrypt__doc__,
+	"str[16], array of iterative keys -> encrypted str[16]");
+
+PyDoc_STRVAR(message_encrypt__doc__,
+	"str[any size > 1], array of iterative keys -> encrypted str (with padding)");
+
+/* {NULL, NULL} means end of definition*/
 
 static void Crypto_dealloc(Crypto* self)
 {
@@ -176,14 +188,6 @@ static int
 		return 0;
 }
 
-static PyMemberDef Crypto_members[] = {
-	{"keys", T_OBJECT_EX, offsetof(Crypto, keys), 0,
-	"array of keys"},
-	{"number", T_INT, offsetof(Crypto, number), 0,
-	"crypto number"},
-	{NULL} /*sentinel*/
-};
-
 static PyObject*
 	Crypto_name(Crypto *self){
 	if (self->keys == NULL){
@@ -192,10 +196,71 @@ static PyObject*
 	return Py_BuildValue("y#", self->keys->buf, 160);
 }
 
+static PyObject*
+	Crypto_message_encrypt(Crypto *self, PyObject *args){
+		if (self->keys == NULL){
+			PyErr_SetString(PyExc_AttributeError, "keys");
+			return NULL;
+		}
+		PyObject* pyMsg;
+		Py_buffer* buff = (Py_buffer*)malloc(sizeof(Py_buffer));
+		int msg_length = 0;
+		if (!PyArg_ParseTuple(args, "y*", buff))
+			return NULL;
+		msg_length = buff->len / buff->itemsize;
+		int extra_length = 0;
+		if (msg_length % 16 != 0)
+			extra_length = 16 - msg_length % 16;
+		int blocks_number = msg_length / 16;
+		uchar* retval = allocate((blocks_number + (extra_length!= 0)) * 16 + 1);
+		uchar* allocated = allocate(48);
+		int st_idx = 0;
+		for (int jdx = 0; jdx < blocks_number; jdx++){
+			encrypt(allocated, (uchar*)buff->buf, jdx, (uchar*)self->keys->buf);
+			for (int idx = 0; idx < 16; idx++){
+				retval[idx+16*jdx] = allocated[idx];
+			}
+		}
+		if (extra_length){
+			for (int idx = 0; idx < 16; idx++){
+				if (idx < 16 - extra_length)
+					allocated[idx] = ((uchar*)buff->buf)[16*blocks_number+idx];
+				else
+					allocated[idx] = '\x00';
+			}
+			encrypt(allocated, allocated, st_idx, (uchar*)self->keys->buf);
+			for (int idx = 0; idx < 16; idx++){
+				retval[idx+16*blocks_number] = allocated[idx];
+			}
+				
+		}
+		pyMsg = Py_BuildValue("y#", retval, (blocks_number + (extra_length!= 0)) * 16);
+		free(buff);
+		free(retval);
+		free(allocated);
+		return pyMsg;
+}
+
 static PyMethodDef Crypto_methods[] = {
-	{"name", (PyCFunction)Crypto_name, METH_NOARGS,
-	"Prints the keys"},
+	{"name", (PyCFunction)Crypto_name, METH_NOARGS, "Prints the keys"},
+	{"message_encrypt", (PyCFunction)Crypto_message_encrypt, METH_VARARGS, message_encrypt__doc__},
 	{NULL} /*sentinel here too*/
+};
+
+/* struct moduledef since python3*/
+static PyModuleDef cryptolibmodule = {
+	PyModuleDef_HEAD_INIT,
+        "cryptolib",
+        cryptolib__doc__,
+        -1,
+        NULL, NULL, NULL, NULL, NULL
+};
+static PyMemberDef Crypto_members[] = {
+	{"keys", T_OBJECT_EX, offsetof(Crypto, keys), 0,
+	"array of keys"},
+	{"number", T_INT, offsetof(Crypto, number), 0,
+	"crypto number"},
+	{NULL} /*sentinel*/
 };
 
 static PyTypeObject CryptoType = {
@@ -239,115 +304,6 @@ static PyTypeObject CryptoType = {
 	Crypto_new,
 };
 
-
-
-/* the Module DocString */
-PyDoc_STRVAR(galoislib__doc__,
-	"Galois polynom multiplication evaluation");
-
-/* function doc strings */
-PyDoc_STRVAR(encrypt__doc__,
-	"str[16], array of iterative keys -> encrypted str[16]");
-
-PyDoc_STRVAR(message_encrypt__doc__,
-	"str[any size > 1], array of iterative keys -> encrypted str (with padding)");
-
-PyDoc_STRVAR(cryptolib__doc__,
-	"Cryptolib for galois mul");
-
-/* wrapper for C function*/
-static PyObject *
-	py_encrypt(PyObject *self, PyObject *args)
-{
-	PyObject* pyMsg;
-	Py_buffer* buff = (Py_buffer*)malloc(sizeof(Py_buffer));
-	int msg_length = 0;
-	/* args must have 2 doubles and may have one integer, otherwise max_iterations defaults to 1000*/
-	/* :iterate_point is for error messages */
-	if (!PyArg_ParseTuple(args, "y*", buff))
-		return NULL;
-	/*make sure what we got is correct*/
-	msg_length = buff->len / buff->itemsize;
-	if (msg_length != 16) return NULL;
-	int st_idx = 0;
-	uchar* allocated = allocate(48);
-	uchar** keys = (uchar**)malloc(10);
-	for (int idx = 0; idx < 10; idx ++)
-		keys[idx] = Keys[idx];
-
-	encrypt(allocated, (uchar*)buff->buf, st_idx, keys);
-	pyMsg = Py_BuildValue("y#", allocated, 16);
-	free(allocated);
-	free(keys);
-	free(buff);
-	return pyMsg;			
-}
-
-static PyObject *
-	py_message_encrypt(PyObject * self, PyObject * args)
-{
-	PyObject* pyMsg;
-	Py_buffer* buff = (Py_buffer*)malloc(sizeof(Py_buffer));
-	int msg_length = 0;
-	if (!PyArg_ParseTuple(args, "y*", buff))
-		return NULL;
-	msg_length = buff->len / buff->itemsize;
-	int extra_length = 0;
-	if (msg_length % 16 != 0)
-		extra_length = 16 - msg_length % 16;
-	int blocks_number = msg_length / 16;
-	uchar* retval = allocate((blocks_number + (extra_length!= 0)) * 16 + 1);
-	uchar* allocated = allocate(48);
-	uchar** keys = (uchar**)malloc(10);
-	int st_idx = 0;
-	for (int idx = 0; idx < 10; idx ++)
-		keys[idx] = Keys[idx];
-	for (int jdx = 0; jdx < blocks_number; jdx++){
-		encrypt(allocated, (uchar*)buff->buf, jdx, keys);
-		for (int idx = 0; idx < 16; idx++){
-			retval[idx+16*jdx] = allocated[idx];
-		}
-	}
-	if (extra_length){
-		for (int idx = 0; idx < 16; idx++){
-			if (idx < 16 - extra_length)
-				allocated[idx] = ((uchar*)buff->buf)[16*blocks_number+idx];
-			else
-				allocated[idx] = '\x00';
-		}
-		encrypt(allocated, allocated, st_idx, keys);
-		for (int idx = 0; idx < 16; idx++){
-			retval[idx+16*blocks_number] = allocated[idx];
-		}
-				
-	}
-	pyMsg = Py_BuildValue("y#", retval, (blocks_number + (extra_length!= 0)) * 16);
-	free(buff);
-	free(retval);
-	free(allocated);
-	free(keys);
-	return pyMsg;
-}
-
-/* list of defined methods*/
-/* iterate_point is name inside Python*/
-/* py_iterate_point is name of c function handling python call*/
-/* METH_VARGS tell py how to call the handler*/
-/* {NULL, NULL} means end of definition*/
-static PyMethodDef galoislib_methods[] = {
-	{"encrypt", py_encrypt, METH_VARARGS, encrypt__doc__},
-	{"message_encrypt", py_message_encrypt, METH_VARARGS, message_encrypt__doc__},
-	{NULL, NULL} /* sentinel*/
-};
-/* struct moduledef since python3*/
-static PyModuleDef cryptolibmodule = {
-	PyModuleDef_HEAD_INIT,
-        "cryptolib",
-        cryptolib__doc__,
-        -1,
-        NULL, NULL, NULL, NULL, NULL
-};
-
 PyMODINIT_FUNC
 PyInit_cryptolib(void){
 	PyObject *module;
@@ -360,20 +316,5 @@ PyInit_cryptolib(void){
 	Py_INCREF(&CryptoType);
 	PyModule_AddObject(module, "Crypto", (PyObject *)&CryptoType);
 	return module;
-}
-
-static struct PyModuleDef moduledef = {
-	PyModuleDef_HEAD_INIT,
-	"galoislib",
-	galoislib__doc__,
-	-1,
-	galoislib_methods,
-};
-/*PyMODINIT_FUNC helps with portability*/
-PyMODINIT_FUNC
-	PyInit_galoislib(void)
-{
-	return PyModule_Create(&moduledef);
-	
 }
 
