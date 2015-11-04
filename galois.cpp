@@ -1,4 +1,5 @@
 #include "Python.h"
+#include "structmember.h"
 #include "stdio.h"
 /*CONSTANTS SECTIONS HERE : #like pascal, LOL*/
 //#define PY_SSIZE_T_CLEAN
@@ -32,6 +33,13 @@ uchar Keys[][16] = {{0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11,
         {0xbb, 0x44, 0xe2, 0x53, 0x78, 0xc7, 0x31, 0x23, 0xa5, 0xf3, 0x2f, 0x73, 0xcd, 0xb6, 0xe5, 0x17},
         {0x72, 0xe9, 0xdd, 0x74, 0x16, 0xbc, 0xf4, 0x5b, 0x75, 0x5d, 0xba, 0xa8, 0x8e, 0x4a, 0x40, 0x43}
         };
+
+typedef struct {
+	PyObject_HEAD
+	Py_buffer* keys;
+	int number;
+} Crypto;
+
 
 void printdebug(uchar* arr_ptr){
 	printf("FIRST: ");
@@ -124,11 +132,118 @@ void encrypt(uchar* allocated, uchar* buf, int st_idx, uchar** keys){
 
 }
 
+
+static void Crypto_dealloc(Crypto* self)
+{
+	free(self->keys);
+	Py_TYPE(self)->tp_free((PyObject*) self);
+}
+
+static PyObject*
+Crypto_new(PyTypeObject *type, PyObject *args, PyObject *kwds){
+		Crypto *self;
+		Py_buffer* placeholder = NULL;
+		self = (Crypto*)type->tp_alloc(type, 0);
+		if (self != NULL){
+			self->keys = placeholder;
+			if (self->keys != NULL){
+				Py_DECREF(self);
+				return NULL;
+			}
+			self->number = 0;
+		}
+		return (PyObject*) self;}
+
+static int
+	Crypto_init(Crypto* self, PyObject* args, PyObject *kwds){
+		Py_buffer* temp = NULL;
+		Py_buffer* keysbuf  = (Py_buffer*)malloc(sizeof(Py_buffer));
+		if (!PyArg_ParseTuple(args, "y*", keysbuf))
+			return -1;
+		if (keysbuf){
+			if (keysbuf->len != 160){
+				free(keysbuf);
+				return -1;
+			}
+			else {
+				temp = self->keys;
+				Py_INCREF(keysbuf);
+				self->keys = keysbuf;
+				Py_XDECREF(temp);				
+				printf("set field ...");
+			}
+		}		
+		return 0;
+}
+
+static PyMemberDef Crypto_members[] = {
+	{"keys", T_OBJECT_EX, offsetof(Crypto, keys), 0,
+	"array of keys"},
+	{"number", T_INT, offsetof(Crypto, number), 0,
+	"crypto number"},
+	{NULL} /*sentinel*/
+};
+
+static PyObject*
+	Crypto_name(Crypto *self){
+	if (self->keys == NULL){
+		PyErr_SetString(PyExc_AttributeError, "keys");
+		return NULL;}
+	return Py_BuildValue("y#", self->keys->buf, 160);
+}
+
+static PyMethodDef Crypto_methods[] = {
+	{"name", (PyCFunction)Crypto_name, METH_NOARGS,
+	"Prints the keys"},
+	{NULL} /*sentinel here too*/
+};
+
+static PyTypeObject CryptoType = {
+	PyVarObject_HEAD_INIT(NULL, 0)
+        "crypto.Crypto",
+	sizeof(Crypto),
+	0,
+	(destructor)Crypto_dealloc,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+	"Crypto objects",
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	Crypto_methods,
+	Crypto_members,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	(initproc)Crypto_init,
+	0,
+	Crypto_new,
+};
+
+
+
 /* the Module DocString */
 PyDoc_STRVAR(galoislib__doc__,
 	"Galois polynom multiplication evaluation");
-
-
 
 /* function doc strings */
 PyDoc_STRVAR(encrypt__doc__,
@@ -136,6 +251,9 @@ PyDoc_STRVAR(encrypt__doc__,
 
 PyDoc_STRVAR(message_encrypt__doc__,
 	"str[any size > 1], array of iterative keys -> encrypted str (with padding)");
+
+PyDoc_STRVAR(cryptolib__doc__,
+	"Cryptolib for galois mul");
 
 /* wrapper for C function*/
 static PyObject *
@@ -222,6 +340,28 @@ static PyMethodDef galoislib_methods[] = {
 	{NULL, NULL} /* sentinel*/
 };
 /* struct moduledef since python3*/
+static PyModuleDef cryptolibmodule = {
+	PyModuleDef_HEAD_INIT,
+        "cryptolib",
+        cryptolib__doc__,
+        -1,
+        NULL, NULL, NULL, NULL, NULL
+};
+
+PyMODINIT_FUNC
+PyInit_cryptolib(void){
+	PyObject *module;
+		
+	if (PyType_Ready(&CryptoType) < 0)
+		return NULL;
+	module = PyModule_Create(&cryptolibmodule);
+	if (module == NULL)
+		return NULL;
+	Py_INCREF(&CryptoType);
+	PyModule_AddObject(module, "Crypto", (PyObject *)&CryptoType);
+	return module;
+}
+
 static struct PyModuleDef moduledef = {
 	PyModuleDef_HEAD_INIT,
 	"galoislib",
