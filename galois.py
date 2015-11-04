@@ -365,15 +365,15 @@ def encrypt(keys, message):
     if VERBOSITY:
         print("ENC({}) = {}".format(message, res))
     return res
-
+chop = lambda s: s[32:64]
 
 def make_keys(key):
     rawkey = bin(int(binascii.hexlify(key.encode('utf-8')), 16)).zfill(256)
     K1, K2 = bytize(rawkey[:128]), bytize(rawkey[128:])
     
-    return compute_keys(K1, K2)
+    return [binascii.unhexlify(chop(tohex(val))) for val in compute_keys(K1, K2)]
     
-chop = lambda s: s[32:64]
+
 
 def message_encrypt(keys, message):
     '''message - hexed bytes themselves, so...'''
