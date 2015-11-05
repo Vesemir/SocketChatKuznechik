@@ -152,9 +152,13 @@ uchar* Linv(uchar* arr_ptr){
 	for (int st_idx = 16; st_idx < 32; st_idx++){
 		Rinv(arr_ptr, st_idx);
 	}
+	printf("before assignment ... \n");
+	printdebug(arr_ptr);
 	for (int idx = 0; idx < 16; idx++){
 		arr_ptr[idx+16] = arr_ptr[idx+32];
 	}
+	printf("before after assignment ... \n");
+	printdebug(arr_ptr);
 	return arr_ptr;
 }
 
@@ -175,9 +179,9 @@ void decrypt(uchar* allocated, uchar* buf, int st_idx, uchar* keys){
 	for (int idx = 8; idx > 0; idx--){
 		Sinv(Linv(X(allocated, allocated, st_idx, keys, idx*16)));
 	}
-	X(allocated, allocated, st_idx, keys, 0);
+	X(allocated, allocated, 16, keys, 0);
 	for (int idx = 0; idx < 16; idx++){
-		allocated[idx] = allocated[idx+32];
+		allocated[idx] = allocated[idx+16];
 	}
 	return;
 	
@@ -193,6 +197,9 @@ PyDoc_STRVAR(encrypt__doc__,
 
 PyDoc_STRVAR(message_encrypt__doc__,
 	"str[any size > 1], array of iterative keys -> encrypted str (with padding)");
+
+PyDoc_STRVAR(message_decrypt__doc__,
+	"str[any size > 1], array of iterative keys -> decrypted str (with padding deleted)");
 
 /* {NULL, NULL} means end of definition*/
 
@@ -265,7 +272,7 @@ static PyObject*
 		uchar* allocated = allocate(48);
 		int st_idx = 0;
 		for (int jdx = 0; jdx < blocks_number; jdx++){
-			encrypt(allocated, (uchar*)buff->buf, jdx*16, (uchar*)self->keys->buf);
+			encrypt(allocated, (uchar*)buff->buf, jdx * 16, (uchar*)self->keys->buf);
 			for (int idx = 0; idx < 16; idx++){
 				retval[idx+16*jdx] = allocated[idx];
 			}
@@ -290,9 +297,45 @@ static PyObject*
 		return pyMsg;
 }
 
+static PyObject*
+	Crypto_message_decrypt(Crypto *self, PyObject *args){
+		if (self->keys == NULL){
+			PyErr_SetString(PyExc_AttributeError, "keys");
+			return NULL;
+		}
+		PyObject* pyMsg;
+		Py_buffer* buff = (Py_buffer*)malloc(sizeof(Py_buffer));
+		int msg_length = 0;
+		if (!PyArg_ParseTuple(args, "y*", buff))
+			return NULL;
+		msg_length = buff->len / buff->itemsize;
+		if (msg_length % 16 != 0){
+			printf("\nWHY WOULD YOU GIVE ME NON-PADDED MESSAGE!\n");
+			return NULL;
+		}
+	    int blocks_number = msg_length / 16;
+		printf("got message with %d blocks", blocks_number);
+		uchar* retval = allocate(blocks_number * 16);
+		uchar* allocated = allocate(48);
+		int st_idx = 0;
+		for (int jdx = 0; jdx < blocks_number; jdx++){
+			decrypt(allocated, (uchar*)buff->buf, jdx * 16, (uchar*)self->keys->buf);
+			for (int idx = 0; idx < 16; idx++){
+				retval[idx+16*jdx] = allocated[idx];
+			}
+		}
+		// here we insert chopping later on
+		pyMsg = Py_BuildValue("y#", retval, blocks_number * 16);
+		free(buff);
+		free(retval);
+		free(allocated);
+		return pyMsg;
+}
+
 static PyMethodDef Crypto_methods[] = {
 	{"name", (PyCFunction)Crypto_name, METH_NOARGS, "Prints the keys"},
 	{"message_encrypt", (PyCFunction)Crypto_message_encrypt, METH_VARARGS, message_encrypt__doc__},
+	{"message_decrypt", (PyCFunction)Crypto_message_decrypt, METH_VARARGS, message_decrypt__doc__},
 	{NULL} /*sentinel here too*/
 };
 
