@@ -20,7 +20,7 @@ const int PI_[] = {252, 238, 221, 17, 207, 110, 49, 22, 251, 196, 250, 218, 35, 
 217, 231, 137, 225, 27, 131, 73, 76, 63, 248, 254, 141, 83, 170, 144, 202, 216, 133,
 97, 32, 113, 103, 164, 45, 43, 9, 91, 203, 155, 37, 208, 190, 229, 108, 82, 89, 166,
 116, 210, 230, 244, 180, 192, 209, 102, 175, 194, 57, 75, 99, 182};
-const int PI_INV_ = {165, 45, 50, 143, 14, 48, 56, 192, 84, 230, 158, 57, 85, 126, 82, 145, 100, 3,
+const int PI_INV_[] = {165, 45, 50, 143, 14, 48, 56, 192, 84, 230, 158, 57, 85, 126, 82, 145, 100, 3,
          87, 90, 28, 96, 7, 24, 33, 114, 168, 209, 41, 198, 164, 63, 224, 39, 141, 12,
          130, 234, 174, 180, 154, 99, 73, 229, 66, 228, 21, 183, 200, 6, 112, 157, 65,
          117, 25, 201, 170, 252, 77, 191, 42, 115, 132, 213, 195, 175, 43, 134, 167, 177,
@@ -34,7 +34,7 @@ const int PI_INV_ = {165, 45, 50, 143, 14, 48, 56, 192, 84, 230, 158, 57, 85, 12
          88, 247, 31, 251, 124, 9, 13, 122, 103, 69, 135, 220, 232, 79, 29, 78, 4, 235,
          248, 243, 62, 61, 189, 138, 136, 221, 205, 11, 19, 152, 2, 147, 128, 144, 208,
          36, 52, 203, 237, 244, 206, 153, 16, 68, 64, 146, 58, 1, 38, 18, 26, 72, 104,
-		 245, 129, 139, 199, 214, 32, 10, 8, 0, 76, 215, 116}
+		 245, 129, 139, 199, 214, 32, 10, 8, 0, 76, 215, 116};
 
 /* FUNCTIONS LIST HERE LIES S #static for it being unaccessible by others */
 
@@ -90,6 +90,7 @@ uchar* Sinv(uchar* arr_ptr) {
 		arr_ptr[i] = PI_INV_[arr_ptr[i]];
 	}
 	return arr_ptr;
+}
 
 uchar* allocate(int size){
 	uchar* fastbuff = (uchar*) malloc (size);
@@ -134,7 +135,7 @@ void R(uchar* arr_ptr, int st_idx){
 void Rinv(uchar* arr_ptr, int st_idx){
 	arr_ptr[st_idx+16] = arr_ptr[st_idx];
 	arr_ptr[st_idx+16] = l(arr_ptr, st_idx+1);
-	return arr_ptr;	
+	return;	
 }
 
 uchar* L(uchar* arr_ptr){
@@ -154,7 +155,8 @@ uchar* Linv(uchar* arr_ptr){
 	for (int idx = 0; idx < 16; idx++){
 		arr_ptr[idx+16] = arr_ptr[idx+32];
 	}
-	return arr_ptr
+	return arr_ptr;
+}
 
 void encrypt(uchar* allocated, uchar* buf, int st_idx, uchar* keys){
 	L(S(X(allocated, buf, st_idx, keys, 0)));
