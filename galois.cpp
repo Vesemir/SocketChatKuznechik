@@ -265,7 +265,7 @@ static PyObject*
 		uchar* allocated = allocate(48);
 		int st_idx = 0;
 		for (int jdx = 0; jdx < blocks_number; jdx++){
-			encrypt(allocated, (uchar*)buff->buf, jdx, (uchar*)self->keys->buf);
+			encrypt(allocated, (uchar*)buff->buf, jdx*16, (uchar*)self->keys->buf);
 			for (int idx = 0; idx < 16; idx++){
 				retval[idx+16*jdx] = allocated[idx];
 			}
