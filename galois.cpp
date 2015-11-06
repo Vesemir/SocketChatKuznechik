@@ -99,9 +99,13 @@ uchar* allocate(int size){
 
 uchar* X(uchar* fastbuff, uchar* ptr_strone, int st_idx, uchar* ptr_strtwo, int key_idx){
 	/* length should be LENGTH*/
+	printf("\nBEFORE XOING\n");
+	printdebug(fastbuff);
 	for (int idx = 0; idx < LENGTH; idx++){
 		fastbuff[idx+16] = ptr_strone[idx+st_idx] ^ ptr_strtwo[idx+key_idx];
 		}
+	printf("\nXOING\n");
+	printdebug(fastbuff);
 	return fastbuff;
 }
 
@@ -177,7 +181,7 @@ void encrypt(uchar* allocated, uchar* buf, int st_idx, uchar* keys){
 void decrypt(uchar* allocated, uchar* buf, int st_idx, uchar* keys){
 	Sinv(Linv(X(allocated, buf, st_idx, keys, 144)));
 	for (int idx = 8; idx > 0; idx--){
-		Sinv(Linv(X(allocated, allocated, st_idx, keys, idx*16)));
+		Sinv(Linv(X(allocated, allocated, 16, keys, idx*16)));
 	}
 	X(allocated, allocated, 16, keys, 0);
 	for (int idx = 0; idx < 16; idx++){
