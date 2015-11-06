@@ -169,9 +169,9 @@ uchar* Linv(uchar* arr_ptr){
 void encrypt(uchar* allocated, uchar* buf, int st_idx, uchar* keys){
 	L(S(X(allocated, buf, st_idx, keys, 0)));
 	for (int idx = 1; idx < 9; idx++){
-		L(S(X(allocated, allocated, st_idx, keys, idx*16)));
+		L(S(X(allocated, allocated, 0, keys, idx*16)));
 	}
-	X(allocated, allocated, st_idx, keys, 144);
+	X(allocated, allocated, 16, keys, 144);
 	for (int idx = 0; idx < 16; idx++){
 		allocated[idx] = allocated[idx+16];
 	}
