@@ -415,7 +415,8 @@ def setCryptoKey(secret_key):
         showinfo(title='Size error!',
                  message='Secret key must be exactly 32 chars long')
         return
-    mysock.cryptor = Crypto(secret_key)
+    CHOPPING_FLAG = 1
+    mysock.cryptor = Crypto(secret_key.encode('utf-8'), CHOPPING_FLAG)
     showinfo(title='Success!',
              message='Secret key was succesfully set')
     myGui.addConfButton.grid(row=0, column=3, sticky='E')

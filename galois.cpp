@@ -53,7 +53,7 @@ uchar Keys[][16] = {{0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11,
 typedef struct {
 	PyObject_HEAD
 	Py_buffer* keys;
-	int number;
+	int chopping_flag;
 } Crypto;
 
 
@@ -224,15 +224,16 @@ Crypto_new(PyTypeObject *type, PyObject *args, PyObject *kwds){
 				Py_DECREF(self);
 				return NULL;
 			}
-			self->number = 0;
+			self->chopping_flag = 0;
 		}
 		return (PyObject*) self;}
 
 static int
 	Crypto_init(Crypto* self, PyObject* args, PyObject *kwds){
 		Py_buffer* temp = NULL;
+		int tempflag = 0;
 		Py_buffer* keysbuf  = (Py_buffer*)malloc(sizeof(Py_buffer));
-		if (!PyArg_ParseTuple(args, "y*", keysbuf))
+		if (!PyArg_ParseTuple(args, "y*i", keysbuf, &tempflag))
 			return -1;
 		
 		if (keysbuf){
@@ -243,6 +244,9 @@ static int
 			else {
 				self->keys = keysbuf;
 			}
+		}
+		if (tempflag) {
+			self->chopping_flag = tempflag;
 		}
 		
 		return 0;
@@ -329,7 +333,15 @@ static PyObject*
 			}
 		}
 		// here we insert chopping later on
-		pyMsg = Py_BuildValue("y#", retval, blocks_number * 16);
+		int chop_size = 0;
+		if (self->chopping_flag){
+			int ctr = msg_length - 1;
+			while (retval[ctr] == '\0') {
+				chop_size += 1;
+				ctr -= 1;
+			}
+		}
+		pyMsg = Py_BuildValue("y#", retval, blocks_number * 16 - chop_size);
 		free(buff);
 		free(retval);
 		free(allocated);
@@ -354,8 +366,8 @@ static PyModuleDef cryptolibmodule = {
 static PyMemberDef Crypto_members[] = {
 	{"keys", T_OBJECT_EX, offsetof(Crypto, keys), 0,
 	"array of keys"},
-	{"number", T_INT, offsetof(Crypto, number), 0,
-	"crypto number"},
+	{"chopping_flag", T_INT, offsetof(Crypto, chopping_flag), 0,
+	"flag, which decides if we should be chopping result"},
 	{NULL} /*sentinel*/
 };
 
