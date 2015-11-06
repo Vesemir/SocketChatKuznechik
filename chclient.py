@@ -1,4 +1,5 @@
-﻿#!python3
+#coding: utf-8
+#!python3
 import socket
 import threading
 import tkinter
