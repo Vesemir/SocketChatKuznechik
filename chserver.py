@@ -144,7 +144,7 @@ class ServSocket(socket.socket):
                         self.sendData(source, magNum['login'], temp)
                     else:
                         self.peerTable[id(source)][2] = buff
-        except ConnectionResetError:
+        except (ConnectionResetError, ConnectionAbortedError):
             screenLock.acquire()
             self.curTime()
             print('peer at IP:%s , port:%s terminated connection'

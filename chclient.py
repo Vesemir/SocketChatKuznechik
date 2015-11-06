@@ -194,9 +194,11 @@ class ChatSocket(socket.socket):
         print('Asked to connect with ', ident, ' user')
 
     def sendMessage(self, mag, msg):
-        if magNum['stream'] != mag:
-            msg = binascii.hexlify(msg.encode('utf-8'))
-        if magNum['message'] == mag:
+        if mag != magNum['stream']:
+            msg = msg.encode('utf-8')
+        if mag not in (magNum['stream'], magNum['message']):
+            msg = binascii.hexlify(msg)
+        if mag in (magNum['message'], magNum['stream']):
             
             if self.cryptor is None:
                 showinfo(title='No key set',
@@ -220,20 +222,27 @@ class ChatSocket(socket.socket):
             dump = self.recv(min(msgLen, CONST))
             recv_bytes += len(dump)
             msg.extend(dump)
-        if magNum['message'] == magic:
+        if magic in (magNum['message'], magNum['stream']):
             if self.cryptor is None:
                 showinfo(title='No key set',
                          message='No secret key set, can\'t do')
                 return magic, -1
             else:
+                if magNum['message'] == magic:
+                    self.cryptor.chopping_flag = 1
+                else:
+                    self.cryptor.chopping_flag = 0
                 msg = self.cryptor.message_decrypt(msg)
-        if magic != magNum['stream']:
+                
+        if magic not in (magNum['stream'], magNum['message']):
             try:
-                msg = binascii.unhexlify(msg).decode('utf-8')
+                msg = binascii.unhexlify(msg)
             except UnicodeDecodeError:
                 print('[!] Error decoding, prolly wrong key')
                 #msg = 'error: ' + str(msg)
                 msg = -1# shouldn't print unreadable messages
+        if magic != magNum['stream']:
+            msg = msg.decode('utf-8')
         return magic, msg
 
     def wipe_key(self):
@@ -305,12 +314,12 @@ class ChatSocket(socket.socket):
                 return
 
 class BufferDescriptor:
-    def __init__(self, milliseconds=100):
+    def __init__(self, milliseconds=200):
         wfxFormat = pywintypes.WAVEFORMATEX()
         wfxFormat.wFormatTag = pywintypes.WAVE_FORMAT_PCM
         wfxFormat.nChannels = 2
-        wfxFormat.nSamplesPerSec = 8000
-        wfxFormat.nAvgBytesPerSec = 32000
+        wfxFormat.nSamplesPerSec = 4000
+        wfxFormat.nAvgBytesPerSec = 16000
         wfxFormat.nBlockAlign = 4
         wfxFormat.wBitsPerSample = 16
 
@@ -319,7 +328,7 @@ class BufferDescriptor:
         self.milliseconds = milliseconds
         self.shape = self.size//4, 2
         self.dtype = np.int16
-        self.Fs = 8000
+        self.Fs = 4000
             
 class SoundRecord(threading.Thread):
     def __init__(self, descriptor, queue, abort):
