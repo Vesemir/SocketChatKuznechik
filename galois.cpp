@@ -309,10 +309,12 @@ static PyObject*
 		if (!PyArg_ParseTuple(args, "y*", buff))
 			return NULL;
 		msg_length = buff->len / buff->itemsize;
+		printf("GOT CRYPTO LENGTH : %d", msg_length);
 		if (msg_length % 16 != 0){
 			printf("\nWHY WOULD YOU GIVE ME NON-PADDED MESSAGE!\n");
 			return NULL;
 		}
+		printf("CONTINUING EXECUTION ...");
 	    int blocks_number = msg_length / 16;
 		uchar* retval = allocate(blocks_number * 16);
 		uchar* allocated = allocate(48);

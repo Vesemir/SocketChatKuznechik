@@ -197,6 +197,7 @@ class ChatSocket(socket.socket):
     def sendMessage(self, mag, msg):
         if mag != magNum['stream']:
             msg = msg.encode('utf-8')
+        print("SENDING .. %d BYTES" % len(msg))
         if mag not in (magNum['stream'], magNum['message']):
             msg = binascii.hexlify(msg)
         if mag in (magNum['message'], magNum['stream']):
@@ -217,7 +218,7 @@ class ChatSocket(socket.socket):
     def recvMessage(self):
         magic = int.from_bytes(self.recv(4), 'little')
         msgLen = int.from_bytes(self.recv(4), 'little')
-        
+        print("MAGIC : %d LENGTH GOT: %d, %d" %(magic, msgLen, msgLen % 16))
         msg, recv_bytes = bytearray(), 0
         while recv_bytes < msgLen:
             dump = self.recv(min(msgLen, CONST))
@@ -230,7 +231,7 @@ class ChatSocket(socket.socket):
                 return magic, -1
             else:
                 if magNum['message'] == magic:
-                    self.cryptor.chopping_flag = 1
+                    self.cryptor.chopping_flag = 0
                 else:
                     self.cryptor.chopping_flag = 0
                 msg = self.cryptor.message_decrypt(msg)
@@ -362,7 +363,7 @@ class SoundRecord(threading.Thread):
             self.buffer.Start(0)
             win32event.WaitForSingleObject(self.event, -1)
             data = self.buffer.Update(0, self.descriptor.size)
-            print(len(data), type(data), self.descriptor.size)
+            #print(len(data), type(data), self.descriptor.size)
             dump = np.frombuffer(data,
                                  dtype=self.descriptor.dtype).reshape(self.descriptor.shape)
             myGui.sock.sendMessage(magNum['stream'], pickle.dumps(dump))
@@ -399,7 +400,7 @@ class SoundPlayer(threading.Thread):
             try:
                 data = self.queue.get(block=True, timeout=self.timeout)
                 # print shape of data and dtype
-                print(data, len(data), type(data))
+                # print(data, len(data), type(data))
                 self.buffer.Update(0, data.tostring())
                 self.buffer.Play(0)
                 win32event.WaitForSingleObject(self.event, -1)
@@ -426,7 +427,7 @@ def setCryptoKey(secret_key):
         showinfo(title='Size error!',
                  message='Secret key must be exactly 32 chars long')
         return
-    CHOPPING_FLAG = 1
+    CHOPPING_FLAG = 0
     mysock.cryptor = Crypto(make_keys(secret_key), CHOPPING_FLAG)
     showinfo(title='Success!',
              message='Secret key was succesfully set')
