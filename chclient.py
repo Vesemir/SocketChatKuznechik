@@ -411,12 +411,13 @@ def startChat(getAnswer='Some data'):
 
 def setCryptoKey(secret_key):
     mysock = myGui.sock
+    
     if len(secret_key) != 32:
         showinfo(title='Size error!',
                  message='Secret key must be exactly 32 chars long')
         return
     CHOPPING_FLAG = 1
-    mysock.cryptor = Crypto(secret_key.encode('utf-8'), CHOPPING_FLAG)
+    mysock.cryptor = Crypto(make_keys(secret_key), CHOPPING_FLAG)
     showinfo(title='Success!',
              message='Secret key was succesfully set')
     myGui.addConfButton.grid(row=0, column=3, sticky='E')

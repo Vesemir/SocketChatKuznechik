@@ -369,6 +369,8 @@ chop = lambda s: s[32:64]
 
 def make_keys(key):
     assert len(key) == 32
+    if isinstance(key, str):
+        key = key.encode('ascii')
     rawkey = bin(int(binascii.hexlify(key), 16)).zfill(256)
     K1, K2 = bytize(rawkey[:128]), bytize(rawkey[128:])
     
