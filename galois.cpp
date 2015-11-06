@@ -99,13 +99,9 @@ uchar* allocate(int size){
 
 uchar* X(uchar* fastbuff, uchar* ptr_strone, int st_idx, uchar* ptr_strtwo, int key_idx){
 	/* length should be LENGTH*/
-	printf("\nBEFORE XOING\n");
-	printdebug(fastbuff);
 	for (int idx = 0; idx < LENGTH; idx++){
 		fastbuff[idx+16] = ptr_strone[idx+st_idx] ^ ptr_strtwo[idx+key_idx];
 		}
-	printf("\nXOING\n");
-	printdebug(fastbuff);
 	return fastbuff;
 }
 
@@ -156,13 +152,9 @@ uchar* Linv(uchar* arr_ptr){
 	for (int st_idx = 16; st_idx < 32; st_idx++){
 		Rinv(arr_ptr, st_idx);
 	}
-	printf("before assignment ... \n");
-	printdebug(arr_ptr);
 	for (int idx = 0; idx < 16; idx++){
 		arr_ptr[idx+16] = arr_ptr[idx+32];
 	}
-	printf("before after assignment ... \n");
-	printdebug(arr_ptr);
 	return arr_ptr;
 }
 
@@ -322,7 +314,6 @@ static PyObject*
 			return NULL;
 		}
 	    int blocks_number = msg_length / 16;
-		printf("got message with %d blocks", blocks_number);
 		uchar* retval = allocate(blocks_number * 16);
 		uchar* allocated = allocate(48);
 		int st_idx = 0;

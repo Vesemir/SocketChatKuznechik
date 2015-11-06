@@ -5,8 +5,8 @@ import threading
 import tkinter
 import sys
 
-import win32event
 import pywintypes
+import win32event
 import numpy as np
 
 import binascii
