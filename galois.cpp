@@ -53,6 +53,8 @@ uchar Keys[][16] = {{0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11,
 typedef struct {
 	PyObject_HEAD
 	Py_buffer* keys;
+        Py_buffer* buff;
+        uchar* allocated;
 	int chopping_flag;
 } Crypto;
 
@@ -202,6 +204,8 @@ PyDoc_STRVAR(message_decrypt__doc__,
 static void Crypto_dealloc(Crypto* self)
 {
 	free(self->keys);
+        free(self->buff);
+        free(self->allocated);
 	Py_TYPE(self)->tp_free((PyObject*) self);
 }
 
@@ -240,7 +244,11 @@ static int
 		if (tempflag) {
 			self->chopping_flag = tempflag;
 		}
-		
+                //init section for temp vars
+                Py_buffer* buff = (Py_buffer*)malloc(sizeof(Py_buffer));
+                self->buff = buff;
+                uchar* allocated = allocate(48);
+                self->allocated = allocated;
 		return 0;
 }
 
@@ -259,41 +267,37 @@ static PyObject*
 			return NULL;
 		}
 		PyObject* pyMsg;
-		Py_buffer* buff = (Py_buffer*)malloc(sizeof(Py_buffer));
 		int msg_length = 0;
-		if (!PyArg_ParseTuple(args, "y*", buff))
+		if (!PyArg_ParseTuple(args, "y*", self->buff))
 			return NULL;
-		msg_length = buff->len / buff->itemsize;
+		msg_length = self->buff->len / self->buff->itemsize;
 		int extra_length = 0;
 		if (msg_length % 16 != 0)
 			extra_length = 16 - msg_length % 16;
 		int blocks_number = msg_length / 16;
 		uchar* retval = allocate((blocks_number + (extra_length!= 0)) * 16);
-		uchar* allocated = allocate(48);
 		int st_idx = 0;
 		for (int jdx = 0; jdx < blocks_number; jdx++){
-			encrypt(allocated, (uchar*)buff->buf, jdx * 16, (uchar*)self->keys->buf);
+			encrypt(self->allocated, (uchar*)self->buff->buf, jdx * 16, (uchar*)self->keys->buf);
 			for (int idx = 0; idx < 16; idx++){
-				retval[idx+16*jdx] = allocated[idx];
+				retval[idx+16*jdx] = (self->allocated)[idx];
 			}
 		}
 		if (extra_length){
 			for (int idx = 0; idx < 16; idx++){
 				if (idx < 16 - extra_length)
-					allocated[idx] = ((uchar*)buff->buf)[16*blocks_number+idx];
+					(self->allocated)[idx] = ((uchar*)self->buff->buf)[16*blocks_number+idx];
 				else
-					allocated[idx] = '\x00';
+					(self->allocated)[idx] = '\x00';
 			}
-			encrypt(allocated, allocated, st_idx, (uchar*)self->keys->buf);
+			encrypt(self->allocated, self->allocated, st_idx, (uchar*)self->keys->buf);
 			for (int idx = 0; idx < 16; idx++){
-				retval[idx+16*blocks_number] = allocated[idx];
+				retval[idx+16*blocks_number] = (self->allocated)[idx];
 			}
 				
 		}
 		pyMsg = Py_BuildValue("y#", retval, (blocks_number + (extra_length!= 0)) * 16);
-		free(buff);
 		free(retval);
-		free(allocated);
 		return pyMsg;
 }
 
@@ -304,25 +308,21 @@ static PyObject*
 			return NULL;
 		}
 		PyObject* pyMsg;
-		Py_buffer* buff = (Py_buffer*)malloc(sizeof(Py_buffer));
 		int msg_length = 0;
-		if (!PyArg_ParseTuple(args, "y*", buff))
+		if (!PyArg_ParseTuple(args, "y*", self->buff))
 			return NULL;
-		msg_length = buff->len / buff->itemsize;
-		printf("GOT CRYPTO LENGTH : %d", msg_length);
+		msg_length = self->buff->len / self->buff->itemsize;
 		if (msg_length % 16 != 0){
 			printf("\nWHY WOULD YOU GIVE ME NON-PADDED MESSAGE!\n");
 			return NULL;
 		}
-		printf("CONTINUING EXECUTION ...");
-	    int blocks_number = msg_length / 16;
+		int blocks_number = msg_length / 16;
 		uchar* retval = allocate(blocks_number * 16);
-		uchar* allocated = allocate(48);
 		int st_idx = 0;
 		for (int jdx = 0; jdx < blocks_number; jdx++){
-			decrypt(allocated, (uchar*)buff->buf, jdx * 16, (uchar*)self->keys->buf);
+			decrypt(self->allocated, (uchar*)self->buff->buf, jdx * 16, (uchar*)self->keys->buf);
 			for (int idx = 0; idx < 16; idx++){
-				retval[idx+16*jdx] = allocated[idx];
+				retval[idx+16*jdx] = (self->allocated)[idx];
 			}
 		}
 		// here we insert chopping later on
@@ -335,9 +335,7 @@ static PyObject*
 			}
 		}
 		pyMsg = Py_BuildValue("y#", retval, blocks_number * 16 - chop_size);
-		free(buff);
 		free(retval);
-		free(allocated);
 		return pyMsg;
 }
 

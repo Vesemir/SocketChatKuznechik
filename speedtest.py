@@ -32,9 +32,9 @@ def avg(numbers):
     return sum(numbers) / len(numbers)
 
 if __name__ == '__main__':
-    cryptor = Crypto(KEYS)
+    cryptor = Crypto(KEYS, 0)
     plotbuff = []
-    for strlen in range(1024, 100000, 1240):
+    for strlen in range(1024, 9000, 1240):
         tring = get_string(strlen)
         tr = timeit.Timer('cryptor.message_encrypt(tring)', 'from __main__ import tring, cryptor')
         res = tr.repeat(repeat=REPEATS, number=1)

@@ -20,10 +20,9 @@ from tkinter.messagebox import showinfo, askquestion
 # executes invariants, probably should mute it later
 from cryptolib import Crypto
 from galois import make_keys
-# [/done]
 
 sys.argv=['chclient']
-CONST = 14400
+CONST = 32176
 magNum ={'info': 0x00000009, 'message': 0x0000000A,'data': 0x0000000B,
          'login': 0x0000000C, 'synchro': 0x0000000D, 'ginfo': 0x00030009,
          'gmessage': 0x0003000A, 'stream': 0x0000000E}
@@ -135,9 +134,9 @@ class ChatGui(tkinter.Tk):
         self.abort_event.clear()
         self.recorder.start()
         self.abort_event.clear()
-        self.player.start()
         self.callButton.grid_forget()
         self.endButton.grid(row=2, column=2, sticky='W')
+        self.player.start()
         
     def setEntry(self):
         idx = self.label.curselection()
@@ -197,7 +196,6 @@ class ChatSocket(socket.socket):
     def sendMessage(self, mag, msg):
         if mag != magNum['stream']:
             msg = msg.encode('utf-8')
-        print("SENDING .. %d BYTES" % len(msg))
         if mag not in (magNum['stream'], magNum['message']):
             msg = binascii.hexlify(msg)
         if mag in (magNum['message'], magNum['stream']):
@@ -207,7 +205,9 @@ class ChatSocket(socket.socket):
                          message='No secret key set, won\'t do')
                 return -1
             else:
-                msg = self.cryptor.message_encrypt(msg)
+                pass
+                #msg = self.cryptor.message_encrypt(msg)
+            
         self.send(int.to_bytes(mag, 4, 'little'))
         self.send(int.to_bytes(len(msg), 4, 'little'))
         send_bytes = 0
@@ -218,7 +218,6 @@ class ChatSocket(socket.socket):
     def recvMessage(self):
         magic = int.from_bytes(self.recv(4), 'little')
         msgLen = int.from_bytes(self.recv(4), 'little')
-        print("MAGIC : %d LENGTH GOT: %d, %d" %(magic, msgLen, msgLen % 16))
         msg, recv_bytes = bytearray(), 0
         while recv_bytes < msgLen:
             dump = self.recv(min(msgLen, CONST))
@@ -230,11 +229,8 @@ class ChatSocket(socket.socket):
                          message='No secret key set, can\'t do')
                 return magic, -1
             else:
-                if magNum['message'] == magic:
-                    self.cryptor.chopping_flag = 0
-                else:
-                    self.cryptor.chopping_flag = 0
-                msg = self.cryptor.message_decrypt(msg)
+                pass
+                #msg = self.cryptor.message_decrypt(msg)
                 
         if magic not in (magNum['stream'], magNum['message']):
             try:
@@ -278,15 +274,12 @@ class ChatSocket(socket.socket):
                 showinfo(title='Refused!', message=
                          'User ' + myGui.IDentry.get() + ' rejected your call')
             else:
-                # start streaming voice data
+                #  streaming voice data
                 myGui.initTalking()
                 
         elif magNum['stream'] == mag:
             try:
-                print('trying to put data in queue')
-                val = pickle.loads(message)
                 self.queue.put(val)
-                print('succesfully loaded', type(val))
             except:
                 showinfo(title='Error!', message='Unrecognized error !')
         elif magNum['login'] == mag:
@@ -320,8 +313,8 @@ class BufferDescriptor:
         wfxFormat = pywintypes.WAVEFORMATEX()
         wfxFormat.wFormatTag = pywintypes.WAVE_FORMAT_PCM
         wfxFormat.nChannels = 2
-        wfxFormat.nSamplesPerSec = 4000
-        wfxFormat.nAvgBytesPerSec = 16000
+        wfxFormat.nSamplesPerSec = 3000
+        wfxFormat.nAvgBytesPerSec = 12000
         wfxFormat.nBlockAlign = 4
         wfxFormat.wBitsPerSample = 16
 
@@ -330,7 +323,7 @@ class BufferDescriptor:
         self.milliseconds = milliseconds
         self.shape = self.size//4, 2
         self.dtype = np.int16
-        self.Fs = 4000
+        self.Fs = self.format.nSamplesPerSec
             
 class SoundRecord(threading.Thread):
     def __init__(self, descriptor, queue, abort):
@@ -359,14 +352,12 @@ class SoundRecord(threading.Thread):
         self.timeout = 2 * descriptor.milliseconds / 1000
 
     def run(self):
+        
         while not self.abort.isSet():
             self.buffer.Start(0)
             win32event.WaitForSingleObject(self.event, -1)
             data = self.buffer.Update(0, self.descriptor.size)
-            #print(len(data), type(data), self.descriptor.size)
-            dump = np.frombuffer(data,
-                                 dtype=self.descriptor.dtype).reshape(self.descriptor.shape)
-            myGui.sock.sendMessage(magNum['stream'], pickle.dumps(dump))
+            myGui.sock.sendMessage(magNum['stream'], data)
 
 class SoundPlayer(threading.Thread):
     def __init__(self, descriptor, queue, abort):
@@ -395,13 +386,10 @@ class SoundPlayer(threading.Thread):
         self.timeout = 0.5 * descriptor.milliseconds / 1000
 
     def run(self):
-        print('trying to play sounds')
         while not self.abort.isSet():
             try:
                 data = self.queue.get(block=True, timeout=self.timeout)
-                # print shape of data and dtype
-                # print(data, len(data), type(data))
-                self.buffer.Update(0, data.tostring())
+                self.buffer.Update(0,   data)
                 self.buffer.Play(0)
                 win32event.WaitForSingleObject(self.event, -1)
             except queue.Empty:
@@ -427,7 +415,7 @@ def setCryptoKey(secret_key):
         showinfo(title='Size error!',
                  message='Secret key must be exactly 32 chars long')
         return
-    CHOPPING_FLAG = 0
+    CHOPPING_FLAG = 1
     mysock.cryptor = Crypto(make_keys(secret_key), CHOPPING_FLAG)
     showinfo(title='Success!',
              message='Secret key was succesfully set')
@@ -447,8 +435,8 @@ def main(ad):
         return
     mysock = ChatSocket(socket.AF_INET,socket.SOCK_STREAM)
     myGui.sock = mysock
-    mysock.desc = BufferDescriptor(milliseconds=350)
-    mysock.queue = queue.Queue(maxsize=100)
+    mysock.desc = BufferDescriptor(milliseconds=200)
+    mysock.queue = queue.Queue(maxsize=200)
     myGui.abort_event = threading.Event()
     try:
         mysock.servConnect(addr)

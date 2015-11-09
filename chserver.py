@@ -12,7 +12,7 @@ magNum ={'info':0x0009, 'message':0x000A,'data':0x000B,
          'login':0x000C, 'synchro':0x000D, 'stream': 0x000E}
 
 screenLock = threading.Semaphore(value=1)
-CONST = 14400
+CONST = 35000
 
 class SockDict(dict):
     def __repr__(self):
