@@ -80,26 +80,26 @@ void printdebug(uchar* arr_ptr){
 	printf("\n");
 }
 
-uchar* S(uchar* arr_ptr) {
+static uchar* S(uchar* arr_ptr) {
 	for (int i = LENGTH; i < LENGTH + 16; i++){
 		arr_ptr[i] = PI_[arr_ptr[i]];
 	}
 	return arr_ptr;
 }
 
-uchar* Sinv(uchar* arr_ptr) {
+static uchar* Sinv(uchar* arr_ptr) {
 	for (int i = LENGTH; i < LENGTH + 16; i++){
 		arr_ptr[i] = PI_INV_[arr_ptr[i]];
 	}
 	return arr_ptr;
 }
 
-uchar* allocate(int size){
+static uchar* allocate(int size){
 	uchar* fastbuff = (uchar*) malloc (size);
 	return fastbuff;
 }
 
-uchar* X(uchar* fastbuff, uchar* ptr_strone, int st_idx, uchar* ptr_strtwo, int key_idx){
+static uchar* X(uchar* fastbuff, uchar* ptr_strone, int st_idx, uchar* ptr_strtwo, int key_idx){
 	/* length should be LENGTH*/
 	for (int idx = 0; idx < LENGTH; idx++){
 		fastbuff[idx+16] = ptr_strone[idx+st_idx] ^ ptr_strtwo[idx+key_idx];
@@ -107,7 +107,7 @@ uchar* X(uchar* fastbuff, uchar* ptr_strone, int st_idx, uchar* ptr_strtwo, int 
 	return fastbuff;
 }
 
-int g_mul(uchar a, uchar b){
+static int g_mul(uchar a, uchar b){
 	int res = 0;
 	int hbit = 0;
 	for (int i = 0; i < 8; i++){
@@ -121,7 +121,7 @@ int g_mul(uchar a, uchar b){
 
 }
 
-int l(uchar* arr_ptr, int st_idx){
+static int l(uchar* arr_ptr, int st_idx){
 	int sum = 0;
 	for (int i = 0; i < LENGTH; i++){
 		sum ^= g_mul(arr_ptr[st_idx+i], MULS[i]); // modify according to size of arr_ptr
@@ -129,18 +129,18 @@ int l(uchar* arr_ptr, int st_idx){
 	return sum;
 }
 
-void R(uchar* arr_ptr, int st_idx){
+static void R(uchar* arr_ptr, int st_idx){
 	arr_ptr[st_idx-1] = l(arr_ptr, st_idx);
 	return;	
 }
 
-void Rinv(uchar* arr_ptr, int st_idx){
+static void Rinv(uchar* arr_ptr, int st_idx){
 	arr_ptr[st_idx+16] = arr_ptr[st_idx];
 	arr_ptr[st_idx+16] = l(arr_ptr, st_idx+1);
 	return;	
 }
 
-uchar* L(uchar* arr_ptr){
+static uchar* L(uchar* arr_ptr){
 	for (int st_idx = LENGTH; st_idx > 0; st_idx--){
 		R(arr_ptr, st_idx);
 	}
@@ -150,7 +150,7 @@ uchar* L(uchar* arr_ptr){
 	return arr_ptr;
 }
 
-uchar* Linv(uchar* arr_ptr){
+static uchar* Linv(uchar* arr_ptr){
 	for (int st_idx = 16; st_idx < 32; st_idx++){
 		Rinv(arr_ptr, st_idx);
 	}
@@ -160,7 +160,7 @@ uchar* Linv(uchar* arr_ptr){
 	return arr_ptr;
 }
 
-void encrypt(uchar* allocated, uchar* buf, int st_idx, uchar* keys){
+static void encrypt(uchar* allocated, uchar* buf, int st_idx, uchar* keys){
 	L(S(X(allocated, buf, st_idx, keys, 0)));
 	for (int idx = 1; idx < 9; idx++){
 		L(S(X(allocated, allocated, 0, keys, idx*16)));
@@ -172,7 +172,7 @@ void encrypt(uchar* allocated, uchar* buf, int st_idx, uchar* keys){
 	return;
 }
 
-void decrypt(uchar* allocated, uchar* buf, int st_idx, uchar* keys){
+static void decrypt(uchar* allocated, uchar* buf, int st_idx, uchar* keys){
 	Sinv(Linv(X(allocated, buf, st_idx, keys, 144)));
 	for (int idx = 8; idx > 0; idx--){
 		Sinv(Linv(X(allocated, allocated, 16, keys, idx*16)));
