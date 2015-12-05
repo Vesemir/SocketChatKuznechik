@@ -7,14 +7,14 @@ import sys
 
 import pywintypes
 import win32event
-import numpy as np
+#import numpy as np
 
 import binascii
 import time
 import queue
 import pickle
 
-from win32com.directsound import directsound
+#from win32com.directsound import directsound
 from tkinter.messagebox import showinfo, askquestion
 
 # executes invariants, probably should mute it later
@@ -73,10 +73,10 @@ class ChatGui(tkinter.Tk):
                                            command=(lambda: setCryptoKey(self.KeyEntry.get())))
         self.IDButton = tkinter.Button(self, text = u'СОЕДИНИТЬ',
                                        command=(lambda: startChat(self.IDentry.get())))
-        self.callButton = tkinter.Button(self, text = u'ЗВОНОК',
-                                         command=(lambda: startCall(self.selfname)))
-        self.endButton = tkinter.Button(self, text = u'ВЫКЛ',
-                                         command=(lambda: self.endCall(True)))
+        #self.callButton = tkinter.Button(self, text = u'ЗВОНОК',
+        #                                 command=(lambda: startCall(self.selfname)))
+        #self.endButton = tkinter.Button(self, text = u'ВЫКЛ',
+        #                                 command=(lambda: self.endCall(True)))
 
         
         self.label = tkinter.Listbox(self, fg='white', bg='black',
@@ -205,8 +205,7 @@ class ChatSocket(socket.socket):
                          message='No secret key set, won\'t do')
                 return -1
             else:
-                pass
-                #msg = self.cryptor.message_encrypt(msg)
+                msg = self.cryptor.message_encrypt(msg)
             
         self.send(int.to_bytes(mag, 4, 'little'))
         self.send(int.to_bytes(len(msg), 4, 'little'))
@@ -229,18 +228,17 @@ class ChatSocket(socket.socket):
                          message='No secret key set, can\'t do')
                 return magic, -1
             else:
-                pass
-                #msg = self.cryptor.message_decrypt(msg)
-                
-        if magic not in (magNum['stream'], magNum['message']):
-            try:
+                msg = self.cryptor.message_decrypt(msg)
+        try:
+            if magic not in (magNum['stream'], magNum['message']):
                 msg = binascii.unhexlify(msg)
-            except UnicodeDecodeError:
+            if magic != magNum['stream']:
+                msg = msg.decode('utf-8')
+        except UnicodeDecodeError:
                 print('[!] Error decoding, prolly wrong key')
                 #msg = 'error: ' + str(msg)
                 msg = -1# shouldn't print unreadable messages
-        if magic != magNum['stream']:
-            msg = msg.decode('utf-8')
+        
         return magic, msg
 
     def wipe_key(self):
@@ -406,7 +404,7 @@ def startChat(getAnswer='Some data'):
     myGui.chatEntry.grid(row=23, column=0, columnspan=2, sticky='WE')
     myGui.chatEntry.focus_set()
     #myGui.confButton.grid(row=23, column=3, sticky='E')
-    myGui.callButton.grid(row=2, column=2, sticky='W')
+    #myGui.callButton.grid(row=2, column=2, sticky='W')
 
 def setCryptoKey(secret_key):
     mysock = myGui.sock
@@ -435,9 +433,9 @@ def main(ad):
         return
     mysock = ChatSocket(socket.AF_INET,socket.SOCK_STREAM)
     myGui.sock = mysock
-    mysock.desc = BufferDescriptor(milliseconds=200)
-    mysock.queue = queue.Queue(maxsize=200)
-    myGui.abort_event = threading.Event()
+    #mysock.desc = BufferDescriptor(milliseconds=200)
+    #mysock.queue = queue.Queue(maxsize=200)
+    #myGui.abort_event = threading.Event()
     try:
         mysock.servConnect(addr)
     except ConnectionError as e:
