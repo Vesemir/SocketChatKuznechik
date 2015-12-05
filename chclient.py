@@ -83,10 +83,10 @@ class ChatGui(tkinter.Tk):
                                      highlightcolor='red', selectmode='SINGLE')
         self.label.bind('<<ListboxSelect>>', lambda e:
                         self.setEntry())
-        self.addConfButton = tkinter.Button(self, text=u'ДОБАВИТЬ В КОНФУ',
-                                            command=(lambda: self.addConf()))
-        self.delConfButton = tkinter.Button(self, text=u'УДАЛИТЬ ИЗ КОНФЫ',
-                                            command=(lambda: self.delConf()))
+        #self.addConfButton = tkinter.Button(self, text=u'ДОБАВИТЬ В КОНФУ',
+        #                                    command=(lambda: self.addConf()))
+        #self.delConfButton = tkinter.Button(self, text=u'УДАЛИТЬ ИЗ КОНФЫ',
+        #                                    command=(lambda: self.delConf()))
 
         self.log = tkinter.Label(self, bg='white', fg='black', anchor='nw',
                                  height = 15, textvariable = self.chatLog,
@@ -94,8 +94,8 @@ class ChatGui(tkinter.Tk):
         self.chatEntry = tkinter.Entry(self)
         self.chatEntry.bind('<Return>', self.onChatEnter)
 
-        self.confButton = tkinter.Button(self, text=u'ПОСЛАТЬ В КОНФУ',
-                                         command=(lambda: self.onConfEnter()))
+        #self.confButton = tkinter.Button(self, text=u'ПОСЛАТЬ В КОНФУ',
+        #                                 command=(lambda: self.onConfEnter()))
         self.login=tkinter.Entry(self)
         self.login.bind('<Return>', login)
 
@@ -405,7 +405,7 @@ def startChat(getAnswer='Some data'):
     mysock.selectPeer(getAnswer)
     myGui.chatEntry.grid(row=23, column=0, columnspan=2, sticky='WE')
     myGui.chatEntry.focus_set()
-    myGui.confButton.grid(row=23, column=3, sticky='E')
+    #myGui.confButton.grid(row=23, column=3, sticky='E')
     myGui.callButton.grid(row=2, column=2, sticky='W')
 
 def setCryptoKey(secret_key):
@@ -419,8 +419,8 @@ def setCryptoKey(secret_key):
     mysock.cryptor = Crypto(make_keys(secret_key), CHOPPING_FLAG)
     showinfo(title='Success!',
              message='Secret key was succesfully set')
-    myGui.addConfButton.grid(row=0, column=3, sticky='E')
-    myGui.delConfButton.grid(row=2, column=3, sticky='E')
+    #myGui.addConfButton.grid(row=0, column=3, sticky='E')
+    #myGui.delConfButton.grid(row=2, column=3, sticky='E')
     myGui.IDentry.grid(column=0, row=3, sticky='W')
     myGui.IDentry.focus_set()
     myGui.IDButton.grid(column=1, row=3, sticky='W')
